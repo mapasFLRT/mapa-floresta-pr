@@ -1,96 +1,122 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8"><title>Mapa Floresta PR</title>
+    <meta charset="UTF-8">
+    <title>Mapa Floresta PR - Logística</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        #topo { padding: 15px; background: #2c3e50; color: white; display: flex; justify-content: space-between; }
+        :root { --accent: #f0a500; --text: #1a2332; }
+        body { font-family: 'DM Sans', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f4f7f9; }
+        header { padding: 15px 20px; background: #ffffff; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; }
         #conteudo { display: flex; flex: 1; overflow: hidden; }
-        #lista { width: 350px; overflow-y: auto; border-right: 1px solid #ccc; padding: 10px; }
-        #mapa { flex: 1; }
-        .item { padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
-        .item:hover { background: #f9f9f9; }
-        .esquina-texto { color: #d35400; font-weight: bold; font-size: 0.85em; margin-top: 5px; display: block; }
+        #sidebar { width: 320px; overflow-y: auto; background: white; border-right: 1px solid #ddd; }
+        #map { flex: 1; }
+        .item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: 0.2s; }
+        .item:hover { background: #fff8e1; }
+        .item-rua { font-weight: bold; color: var(--text); display: block; }
+        .item-bairro { font-size: 0.75rem; color: #64748b; }
+        .item-esquina { color: #e05c2a; font-weight: bold; font-size: 0.75rem; margin-top: 5px; display: block; }
+        .status-badge { font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; background: #e8f5e9; color: #2e7d32; }
     </style>
 </head>
 <body>
 
-<div id="topo">
-    <b>📍 MAPA DE LOGÍSTICA - FLORESTA PR</b>
-    <span id="status">Carregando...</span>
-</div>
+<header>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:20px;">📍</span>
+        <b style="font-size:1.1rem;">Mapa Floresta PR</b>
+    </div>
+    <div id="status" class="status-badge">Conectando à planilha...</div>
+</header>
 
 <div id="conteudo">
-    <div id="lista"></div>
-    <div id="mapa"></div>
+    <div id="sidebar">
+        <div style="padding:15px; border-bottom:1px solid #eee;">
+            <input type="text" id="busca" placeholder="Filtrar endereço..." style="width:100%; padding:8px; border:1px solid #ddd; border-radius:4px;">
+        </div>
+        <div id="lista-enderecos"></div>
+    </div>
+    <div id="map"></div>
 </div>
 
 <script>
-// URL Forçada para ignorar qualquer cache
-const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1i8jO65wCCTW_R2FcY-O0f_EvOEqOq2BYFTplZtw8kU8/export?format=csv&gid=0&t=' + Date.now();
+const SHEET_ID = '1i8jO65wCCTW_R2FcY-O0f_EvOEqOq2BYFTplZtw8kU8';
+// Forçamos o Google a entregar todas as colunas possíveis até a letra J
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0&range=A1:J200&t=` + Date.now();
 
-let mapa = L.map('mapa').setView([-23.608, -52.087], 14);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapa);
+let mapa = L.map('map').setView([-23.608, -52.087], 14);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mapa);
 
-async function carregar() {
+function csvParaArray(texto) {
+    return texto.trim().split('\n').map(linha => {
+        const colunas = []; let entreAspas = false, atual = '';
+        for (const char of linha) {
+            if (char === '"') entreAspas = !entreAspas;
+            else if (char === ',' && !entreAspas) { colunas.push(atual.trim()); atual = ''; }
+            else atual += char;
+        }
+        colunas.push(atual.trim());
+        return colunas;
+    });
+}
+
+async function inicializar() {
     try {
-        const resposta = await fetch(SHEET_URL);
-        const csv = await resposta.text();
+        const res = await fetch(CSV_URL);
+        const csvText = await res.text();
+        const dadosCrus = csvParaArray(csvText);
         
-        // Converte CSV em Array (Matriz)
-        const linhas = csv.split('\n').map(l => l.split(',').map(c => c.replace(/"/g,'').trim()));
-        const cabecalho = linhas[0];
+        const cabecalho = dadosCrus[0].map(h => h.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
         
-        // ACHA A COLUNA PELO NOME (Não importa a posição)
-        const idxEnd = cabecalho.findIndex(h => h.toLowerCase().includes('endere'));
-        const idxBairro = cabecalho.findIndex(h => h.toLowerCase().includes('bairro'));
-        const idxLat = cabecalho.findIndex(h => h.toLowerCase().includes('lat'));
-        const idxLng = cabecalho.findIndex(h => h.toLowerCase().includes('lng') || h.toLowerCase().includes('lon'));
-        const idxEsq = cabecalho.findIndex(h => h.toLowerCase().includes('esquina'));
+        // Localização dinâmica das colunas
+        const iEnd = cabecalho.findIndex(h => h.includes('endere'));
+        const iBairro = cabecalho.findIndex(h => h.includes('bairro'));
+        const iLat = cabecalho.findIndex(h => h.includes('lat'));
+        const iLng = cabecalho.findIndex(h => h.includes('lng') || h.includes('lon'));
+        const iEsq = cabecalho.findIndex(h => h.includes('esquina'));
 
-        console.log("Índices encontrados:", {idxEnd, idxBairro, idxEsq});
+        const listaContainer = document.getElementById('lista-enderecos');
+        const linhasDados = dadosCrus.slice(1);
 
-        const listaDiv = document.getElementById('lista');
-        listaDiv.innerHTML = '';
+        linhasDados.forEach(col => {
+            const lat = parseFloat(col[iLat]?.replace(',', '.'));
+            const lng = parseFloat(col[iLng]?.replace(',', '.'));
+            
+            if (isNaN(lat)) return;
 
-        linhas.slice(1).forEach(col => {
-            if (!col[idxLat]) return;
+            const endereco = col[iEnd] || 'Sem endereço';
+            const bairro = col[iBairro] || 'Sem bairro';
+            const esquina = (iEsq !== -1 && col[iEsq]) ? col[iEsq] : '';
 
-            const dados = {
-                rua: col[idxEnd],
-                bairro: col[idxBairro],
-                esquina: idxEsq !== -1 ? col[idxEsq] : '',
-                lat: parseFloat(col[idxLat].replace(',','.')),
-                lng: parseFloat(col[idxLng].replace(',','.'))
-            };
-
-            // Adiciona na Lista Lateral
-            const item = document.createElement('div');
-            item.className = 'item';
-            item.innerHTML = `
-                <b>${dados.rua}</b><br>
-                <small>${dados.bairro}</small>
-                ${dados.esquina ? `<span class="esquina-texto">⤷ Esq. com: ${dados.esquina}</span>` : ''}
+            // Criar Item na Lista
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `
+                <span class="item-rua">${endereco}</span>
+                <span class="item-bairro">${bairro}</span>
+                ${esquina ? `<span class="item-esquina">⤷ Esq. com: ${esquina}</span>` : ''}
             `;
-            item.onclick = () => mapa.setView([dados.lat, dados.lng], 18);
-            listaDiv.appendChild(item);
+            div.onclick = () => {
+                mapa.setView([lat, lng], 18);
+                marker.openPopup();
+            };
+            listaContainer.appendChild(div);
 
-            // Adiciona no Mapa
-            L.marker([dados.lat, dados.lng])
-             .addTo(mapa)
-             .bindPopup(`<b>${dados.rua}</b><br>Esquina: ${dados.esquina || 'Não informada'}`);
+            // Criar Marcador no Mapa
+            const marker = L.marker([lat, lng]).addTo(mapa)
+                .bindPopup(`<b>${endereco}</b><br>${bairro}${esquina ? '<br><i style="color:#e05c2a">Esq. com: ' + esquina + '</i>' : ''}`);
         });
 
-        document.getElementById('status').innerText = 'Dados Atualizados';
-    } catch (erro) {
-        document.getElementById('status').innerText = 'Erro ao carregar';
-        console.error(erro);
+        document.getElementById('status').innerText = 'Dados Sincronizados (' + linhasDados.length + ')';
+    } catch (e) {
+        document.getElementById('status').style.background = '#ffebee';
+        document.getElementById('status').style.color = '#c62828';
+        document.getElementById('status').innerText = 'Erro na conexão';
     }
 }
 
-carregar();
+inicializar();
 </script>
 </body>
 </html>
