@@ -389,7 +389,7 @@ async function carregarDados() {
     const linhas = csvParse(csv);
 
     // Localiza a data do último cadastro (Coluna F / Índice 5)
-    // Percorremos de baixo para cima para pegar o registro mais recente inserido
+    // Percorrido de baixo para cima para pegar o registro mais recente inserido
     for (let i = linhas.length - 1; i >= 0; i--) {
         const val = (linhas[i][5] || '').trim();
         // Verifica se a célula tem um formato de data (ex: 05/05/2026)
