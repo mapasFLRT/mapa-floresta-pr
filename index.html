@@ -141,14 +141,19 @@ async function carregarDados() {
 
         document.getElementById('updateDate').textContent = (linhas[1] && linhas[1][5]) ? linhas[1][5] : '—';
 
-        todosEnderecos = linhas.slice(1).map((c, i) => ({
-            _idx: i,
-            endereco: c[0] || '',
-            bairro: c[1] || '',
-            esquina: c[6] || '', // Captura a coluna G (índice 6)
-            lat: parseBr(c[3]),
-            lng: parseBr(c[4])
-        })).filter(d => d.lat && d.lng);
+        todosEnderecos = linhas.slice(1).map((c, i) => {
+            // Verificamos se a coluna G (índice 6) existe, se não, tentamos a anterior
+            const refEsquina = c[6] ? c[6].trim() : (c[c.length - 1] || ''); 
+            
+            return {
+                _idx: i,
+                endereco: c[0] || '',
+                bairro: c[1] || '',
+                esquina: refEsquina, 
+                lat: parseBr(c[3]),
+                lng: parseBr(c[4])
+            };
+        }).filter(d => d.lat && d.lng);
 
         setStatus('ok', `${todosEnderecos.length} endereços`);
         document.getElementById('loadingGeral').style.display = 'none';
