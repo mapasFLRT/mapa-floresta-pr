@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mapa de Endereços — Floresta PR</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root {
+  --bg: #f4f7f9;          /* Fundo da página claro */
+  --surface: #ffffff;     /* Superfície dos cards branca */
+  --surface2: #f8f9fa;    /* Tons de cinza para tabelas */
+  --border: #dce3e8;      /* Bordas suaves */
+  --border2: #c4ced6;     /* Bordas de botões */
+  --accent: #f0a500;      /* Mantém o destaque laranja */
+  --accent2: #e05c2a;     
+  --accent3: #0891b2;     /* Azul escuro para filtros ativos */
+  --text: #1a2332;        /* Texto principal escuro */
+  --muted: #64748b;       /* Textos secundários */
+  --muted2: #475569;
+  --ok: #28a745;
+  --tab-h: 52px;
+  --header-h: 64px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+
+header{
+  height:var(--header-h);display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;background:var(--surface);border-bottom:1px solid var(--border);
+  position:relative;z-index:200;flex-shrink:0;
+}
+.brand{display:flex;align-items:center;gap:12px;}
+.brand-icon{
+  width:38px;height:38px;border-radius:8px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  box-shadow:0 2px 12px rgba(240,165,0,.3);
+}
+.brand-name{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-.02em;}
+.brand-name em{color:var(--accent);font-style:normal;}
+.header-right{display:flex;align-items:center;gap:20px;}
+.update-badge{
+  display:flex;align-items:center;gap:7px;
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:6px;padding:5px 12px;font-size:.78rem;
+}
+.update-badge .label{color:var(--muted2);}
+.update-badge .date{font-family:'DM Mono',monospace;color:var(--accent3);font-weight:500;}
+.status-chip{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--muted2);}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:blink 2s infinite;}
+.dot.loading{background:var(--accent);}
+.dot.error{background:#f85149;animation:none;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+.tabs{
+  height:var(--tab-h);display:flex;align-items:stretch;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 24px;gap:2px;flex-shrink:0;
+}
+.tab{
+  display:flex;align-items:center;gap:8px;padding:0 18px;
+  font-size:.84rem;font-weight:500;cursor:pointer;
+  border-bottom:2px solid transparent;color:var(--muted2);
+  transition:all .18s;user-select:none;
+}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+.app-body{
+  height:calc(100vh - var(--header-h) - var(--tab-h));
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.panel{display:none;flex:1;overflow:hidden;}
+.panel.active{display:flex;}
+
+.sidebar{
+  width:290px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;
+}
+.sidebar-top{padding:14px 18px 10px;border-bottom:1px solid var(--border);}
+.sidebar-top h3{
+  font-family:'Syne',sans-serif;font-size:.78rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;
+}
+.count-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(240,165,0,.15);color:var(--accent);
+  font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:6px;
+}
+.search{position:relative;}
+.search input{
+  width:100%;padding:7px 10px 7px 32px;
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;
+  transition:border-color .2s;
+}
+.search input:focus{border-color:var(--accent);}
+.search::before{content:'⌕';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:1rem;}
+
+.filter-bar{padding:8px 18px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;}
+.filter-btn{
+  padding:3px 10px;border-radius:20px;border:1px solid var(--border2);
+  background:transparent;color:var(--muted2);font-size:.72rem;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .15s;
+}
+.filter-btn:hover{border-color:var(--accent3);color:var(--accent3);}
+.filter-btn.active{background:rgba(45,212,191,.15);border-color:var(--accent3);color:var(--accent3);}
+
+.list{flex:1;overflow-y:auto;padding:6px 0;}
+.list::-webkit-scrollbar{width:3px;}
+.list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.list-item{
+  padding:10px 18px;cursor:pointer;
+  border-left:3px solid transparent;transition:all .13s;
+  display:flex;align-items:flex-start;gap:10px;
+}
+.list-item:hover{background:rgba(240,165,0,.04);border-left-color:var(--border2);}
+.list-item.active{background:rgba(240,165,0,.08);border-left-color:var(--accent);}
+.list-num{
+  min-width:22px;height:22px;border-radius:50%;
+  background:var(--border2);color:var(--muted2);
+  font-size:.68rem;font-weight:700;font-family:'DM Mono',monospace;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+}
+.list-item.active .list-num{background:var(--accent);color:#000;}
+.list-info .addr{font-size:.82rem;font-weight:500;line-height:1.35;}
+.list-info .bairro{font-size:.72rem;color:var(--muted2);margin-top:2px;}
+
+.sidebar-bottom{padding:10px 18px;border-top:1px solid var(--border);}
+.btn{
+  width:100%;padding:7px 12px;border-radius:6px;border:1px solid var(--border2);
+  background:transparent;color:var(--muted2);font-family:'DM Sans',sans-serif;font-size:.78rem;
+  cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+
+.map-wrap{flex:1;position:relative;}
+#map-geral{width:100%;height:100%;}
+.leaflet-popup-content-wrapper{
+  background:var(--surface)!important;border:1px solid var(--border2)!important;
+  border-radius:10px!important;box-shadow:0 8px 24px rgba(0,0,0,.5)!important;color:var(--text)!important;
+}
+.leaflet-popup-tip{background:var(--surface)!important;}
+.popup-addr{font-family:'Syne',sans-serif;font-weight:600;font-size:.92rem;margin-bottom:3px;}
+.popup-bairro{font-size:.78rem;color:var(--muted2);}
+.popup-num{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:50%;background:var(--accent);
+  color:#000;font-size:.68rem;font-weight:800;margin-bottom:6px;
+}
+
+#panel-bairros{flex-direction:column;}
+.bairro-toolbar{
+  padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;
+}
+.bairro-toolbar label{font-size:.8rem;color:var(--muted2);font-weight:500;}
+select#bairroSelect{
+  padding:6px 10px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;outline:none;cursor:pointer;
+  min-width:200px;
+}
+select#bairroSelect:focus{border-color:var(--accent);}
+.spacer{flex:1;}
+.btn-all-pdf{
+  padding:6px 14px;border-radius:6px;
+  background:rgba(240,165,0,.1);border:1px solid var(--accent);
+  color:var(--accent);font-size:.78rem;font-family:'DM Sans',sans-serif;cursor:pointer;
+  transition:all .18s;
+}
+.btn-all-pdf:hover{background:rgba(240,165,0,.22);}
+
+.bairros-scroll{flex:1;overflow-y:auto;padding:20px;}
+.bairros-scroll::-webkit-scrollbar{width:4px;}
+.bairros-scroll::-webkit-scrollbar-thumb{background:var(--border2);}
+
+.grupo-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:28px;overflow:hidden;
+}
+.grupo-header{
+  padding:14px 20px;background:var(--surface2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.grupo-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;}
+.grupo-meta{font-size:.75rem;color:var(--muted2);margin-top:2px;}
+.btn-pdf{
+  padding:5px 14px;border-radius:6px;
+  background:rgba(240,165,0,.1);border:1px solid var(--accent);
+  color:var(--accent);font-size:.75rem;font-family:'DM Sans',sans-serif;cursor:pointer;
+  display:flex;align-items:center;gap:5px;transition:all .18s;white-space:nowrap;
+}
+.btn-pdf:hover{background:rgba(240,165,0,.22);}
+.btn-pdf:disabled{opacity:.5;cursor:not-allowed;}
+
+.grupo-map{height:320px;width:100%;}
+.grupo-table{overflow-x:auto;}
+table.endtable{width:100%;border-collapse:collapse;font-size:.8rem;}
+table.endtable th{
+  padding:8px 14px;text-align:left;
+  font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+  background:var(--surface2);border-bottom:1px solid var(--border);
+}
+table.endtable td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--text);}
+table.endtable tr:last-child td{border-bottom:none;}
+table.endtable tr:hover td{background:rgba(255,255,255,.02);}
+.td-num{width:36px;text-align:center;font-family:'DM Mono',monospace;font-weight:700;color:var(--accent);}
+.td-endereco{font-weight:500;}
+.td-bairro{color:var(--muted2);}
+
+.loading-overlay{
+  position:absolute;inset:0;background:rgba(10,14,20,.75);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;z-index:999;backdrop-filter:blur(4px);
+}
+.spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-overlay p{font-size:.85rem;color:var(--muted2);}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:.85rem;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">📍</div>
+    <div class="brand-name">Mapa <em>Floresta</em> PR</div>
+  </div>
+  <div class="header-right">
+    <div class="update-badge">
+      <span class="label">Última atualização:</span>
+      <span class="date" id="updateDate">—</span>
+    </div>
+    <div class="status-chip">
+      <div class="dot loading" id="statusDot"></div>
+      <span id="statusText">Carregando…</span>
+    </div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" id="tab-geral" onclick="switchTab('geral')">
+    🗺️ &nbsp;Visão Geral
+  </div>
+  <div class="tab" id="tab-bairros" onclick="switchTab('bairros')">
+    🏘️ &nbsp;Por Bairro / PDF
+  </div>
+</div>
+
+<div class="app-body">
+
+  <!-- PAINEL 1: GERAL -->
+  <div class="panel active" id="panel-geral">
+    <div class="sidebar">
+      <div class="sidebar-top">
+        <h3>Endereços <span class="count-pill" id="countGeral">0</span></h3>
+        <div class="search">
+          <input type="text" id="searchGeral" placeholder="Buscar endereço ou bairro…" oninput="filtrarGeral()"/>
+        </div>
+      </div>
+      <div class="filter-bar" id="filterBar"></div>
+      <div class="list" id="listaGeral"></div>
+      <div class="sidebar-bottom">
+        <button class="btn" onclick="carregarDados()">↻ Atualizar planilha</button>
+      </div>
+    </div>
+    <div class="map-wrap">
+      <div id="map-geral"></div>
+      <div class="loading-overlay" id="loadingGeral">
+        <div class="spinner"></div>
+        <p>Carregando endereços…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAINEL 2: BAIRROS + PDF -->
+  <div class="panel" id="panel-bairros">
+    <div class="bairro-toolbar">
+      <label>Filtrar bairro:</label>
+      <select id="bairroSelect" onchange="renderBairros()">
+        <option value="">Todos os bairros</option>
+      </select>
+      <div class="spacer"></div>
+      <button class="btn-all-pdf" onclick="baixarTodosPDFs()">⬇ Todos os PDFs</button>
+    </div>
+    <div class="bairros-scroll" id="bairrosScroll">
+      <div class="empty">Carregando dados…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════
+//  CONFIGURAÇÃO
+// ═══════════════════════════════════
+const SHEET_ID = '1i8jO65wCCTW_R2FcY-O0f_EvOEqOq2BYFTplZtw8kU8';
+const SHEET_NAME = 'Endereços'; // nome da aba na planilha
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+// DATA DE ATUALIZAÇÃO: coloque na planilha, coluna E de qualquer linha de dados
+// Exemplo: na célula E2 da sua aba, coloque "05/05/2025"
+// ═══════════════════════════════════
+
+let todosEnderecos = [];
+let mapGeral = null;
+let marcadoresGeral = [];
+let mapsBairro = {};
+let activeIdx = null;
+let dataAtualizacao = '—';
+
+function setStatus(tipo, msg) {
+  document.getElementById('statusDot').className = 'dot ' + tipo;
+  document.getElementById('statusText').textContent = msg;
+}
+
+function parseBr(v) {
+  if (!v) return null;
+  const n = parseFloat(v.toString().replace(/\s/g,'').replace(',','.'));
+  return isNaN(n) ? null : n;
+}
+
+function csvParse(text) {
+  return text.trim().split('\n').map(linha => {
+    const cols = []; let inside = false, cur = '';
+    for (const c of linha) {
+      if (c === '"') { inside = !inside; }
+      else if (c === ',' && !inside) { cols.push(cur.trim()); cur = ''; }
+      else cur += c;
+    }
+    cols.push(cur.trim());
+    return cols;
+  });
+}
+
+function pinIcon(num, color='#f0a500') {
+  return L.divIcon({
+    className:'',
+    html:`<svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="15" cy="40" rx="6" ry="2" fill="rgba(0,0,0,.35)"/>
+      <path d="M15 0C7.82 0 2 5.82 2 13c0 10 13 27 13 27s13-17 13-27C28 5.82 22.18 0 15 0z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
+      <circle cx="15" cy="13" r="7" fill="#fff" fill-opacity=".92"/>
+      <text x="15" y="17" text-anchor="middle" fill="${color}" font-size="8" font-weight="800" font-family="monospace">${num}</text>
+    </svg>`,
+    iconSize:[30,42], iconAnchor:[15,42], popupAnchor:[0,-42]
+  });
+}
+
+function darkTiles(map) {
+  // Alteração da URL de 'dark_all' para 'voyager'
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO',
+    maxZoom: 19,
+    crossOrigin: true // Necessário para a captura nítida do PDF
+  }).addTo(map);
+}
+
+// ── Carregar dados ──────────────────
+async function carregarDados() {
+  setStatus('loading','Carregando…');
+  document.getElementById('loadingGeral').style.display='flex';
+  try {
+    const url = CSV_URL + '&t=' + Date.now();
+    let csv;
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(r.status);
+      csv = await r.text();
+    } catch {
+      const r2 = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
+      if (!r2.ok) throw new Error(r2.status);
+      csv = await r2.text();
+    }
+
+    const linhas = csvParse(csv);
+
+    // Data de atualização: coluna F (índice 5)
+    for (let i = 0; i < linhas.length; i++) {
+      const val = (linhas[i][5]||'').trim();
+      if (val && val.match(/\d{2}[\/\-]\d{2}/)) {
+        dataAtualizacao = val;
+        document.getElementById('updateDate').textContent = val;
+        break;
+      }
+    }
+
+    const dados = linhas.slice(1).map((c,i)=>({
+      _idx: i,
+      endereco: c[0]||'',
+      bairro:   c[1]||'',
+      lat: parseBr(c[3]),
+      lng: parseBr(c[4]),
+    })).filter(d => d.endereco && d.lat && d.lng);
+
+    todosEnderecos = dados;
+    setStatus('ok', `${dados.length} endereços`);
+    document.getElementById('loadingGeral').style.display='none';
+
+    renderGeralLista(dados);
+    renderGeralMarcadores(dados);
+    popularFiltros(dados);
+    popularSelectBairro(dados);
+
+  } catch(e) {
+    setStatus('error','Erro ao carregar');
+    document.getElementById('loadingGeral').style.display='none';
+    console.error(e);
+  }
+}
+
+// ── Painel Geral ───────────────────
+function renderGeralLista(dados) {
+  document.getElementById('countGeral').textContent = dados.length;
+  const lista = document.getElementById('listaGeral');
+  if (!dados.length) { lista.innerHTML='<div class="empty">Nenhum resultado.</div>'; return; }
+  lista.innerHTML = dados.map((item,i)=>`
+    <div class="list-item" id="gi-${item._idx}" onclick="focarGeral(${item._idx})">
+      <div class="list-num">${i+1}</div>
+      <div class="list-info">
+        <div class="addr">${item.endereco}</div>
+        <div class="bairro">${item.bairro}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderGeralMarcadores(dados) {
+  marcadoresGeral.forEach(m => mapGeral.removeLayer(m));
+  marcadoresGeral = [];
+  
+  // Objeto para rastrear coordenadas já usadas nesta renderização
+  const posicoesOcupadas = {};
+
+  dados.forEach((item, i) => {
+    let lat = item.lat;
+    let lng = item.lng;
+    const chave = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+
+    // Se a posição já estiver ocupada por outro pin, aplica um leve desvio
+    if (posicoesOcupadas[chave]) {
+      lat += (Math.random() - 0.5) * 0.00008; 
+      lng += (Math.random() - 0.5) * 0.00008;
+    }
+    posicoesOcupadas[chave] = true;
+
+    const m = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className:'', 
+        html:`<div style="background:var(--accent);width:22px;height:22px;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:black;box-shadow:0 2px 5px rgba(0,0,0,0.3)">${i+1}</div>`
+      })
+    }).addTo(mapGeral);
+    
+    m.bindPopup(`<div class="popup-num">${i+1}</div><div class="popup-addr">${item.endereco}</div><div class="popup-bairro">📍 ${item.bairro}</div>`);
+    m.on('click', () => focarGeral(item._idx));
+    marcadoresGeral.push(m);
+  });
+
+  if (dados.length > 0) {
+    mapGeral.fitBounds(L.latLngBounds(dados.map(d => [d.lat, d.lng])), {padding: [40, 40]});
+  }
+}
+
+function focarGeral(idx) {
+  if (activeIdx !== null) {
+    const el = document.getElementById('gi-'+activeIdx);
+    if(el) el.classList.remove('active');
+  }
+  activeIdx = idx;
+  const el = document.getElementById('gi-'+idx);
+  if(el){el.classList.add('active');el.scrollIntoView({block:'nearest'});}
+  const item = todosEnderecos.find(d=>d._idx===idx);
+  const pos = todosEnderecos.filter(d=>d.lat).findIndex(d=>d._idx===idx);
+  if(item) mapGeral.setView([item.lat,item.lng],17,{animate:true});
+  if(pos>=0 && marcadoresGeral[pos]) marcadoresGeral[pos].openPopup();
+}
+
+function filtrarGeral() {
+  const q = document.getElementById('searchGeral').value.toLowerCase();
+  // Busca o botão que está com a classe 'active' para saber qual o bairro filtrado
+  const btnAtivo = document.querySelector('.filter-btn.active');
+  const filtroBairro = btnAtivo ? btnAtivo.getAttribute('data-bairro') : '';
+  
+  const f = todosEnderecos.filter(d => {
+    const matchBusca = d.endereco.toLowerCase().includes(q);
+    const matchBairro = !filtroBairro || d.bairro === filtroBairro;
+    return matchBusca && matchBairro;
+  });
+
+  renderGeralLista(f);
+  renderGeralMarcadores(f);
+}
+
+function setFiltro(btn, bairro) {
+  // Remove a classe active de todos e adiciona no clicado
+  document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
+  btn.classList.add('active');
+  
+  // Executa a filtragem
+  filtrarGeral();
+}
+
+function popularFiltros(dados) {
+  const bairros = [...new Set(dados.map(d => d.bairro))].sort();
+  const bar = document.getElementById('filterBar');
+  
+  // IMPORTANTE: O botão 'Tudo' agora tem o data-bairro="" definido explicitamente
+  bar.innerHTML = `<button class="filter-btn active" data-bairro="" onclick="setFiltro(this,'')">Tudo</button>` + 
+    bairros.map(x => {
+      const xEscapado = x.replace(/'/g, "\\'"); // Trata nomes de bairros com aspas/apostrofos
+      return `<button class="filter-btn" data-bairro="${x}" onclick="setFiltro(this,'${xEscapado}')">${x}</button>`;
+    }).join('');
+}
+
+// ── Painel Bairros ─────────────────
+function popularSelectBairro(dados) {
+  const bairros = [...new Set(dados.map(d=>d.bairro).filter(Boolean))].sort();
+  const sel = document.getElementById('bairroSelect');
+  sel.innerHTML = '<option value="">Todos os bairros</option>'
+    + bairros.map(b=>`<option value="${b}">${b}</option>`).join('');
+}
+
+function renderBairros() {
+  const filtro = document.getElementById('bairroSelect').value;
+  const scroll = document.getElementById('bairrosScroll');
+  scroll.innerHTML = '';
+  
+  // Limpa mapas existentes para evitar lentidão e vazamento de memória
+  Object.values(mapsBairro).forEach(m => { try { m.remove(); } catch (e) {} });
+  mapsBairro = {};
+
+  let dados = filtro ? todosEnderecos.filter(d => d.bairro === filtro) : todosEnderecos;
+  if (!dados.length) { 
+    scroll.innerHTML = '<div class="empty">Nenhum endereço encontrado.</div>'; 
+    return; 
+  }
+
+  // Agrupar por bairro para criar os blocos
+  const grupos = {};
+  dados.forEach(d => {
+    const k = d.bairro || 'Sem bairro';
+    if (!grupos[k]) grupos[k] = [];
+    grupos[k].push(d);
+  });
+
+  Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b, 'pt')).forEach(([bairro, items]) => {
+    const totalPags = Math.ceil(items.length / 10);
+    
+    for (let p = 0; p < totalPags; p++) {
+      const bloco = items.slice(p * 10, (p + 1) * 10);
+      const grupoId = `g_${bairro.replace(/[^a-zA-Z0-9]/g, '_')}_${p}`;
+      const paginaLabel = totalPags > 1 ? ` — Pág. ${p + 1}/${totalPags}` : '';
+
+      const card = document.createElement('div');
+      card.className = 'grupo-card';
+      card.id = grupoId;
+      card.innerHTML = `
+        <div class="grupo-header">
+          <div>
+            <div class="grupo-title">📍 ${bairro}${paginaLabel}</div>
+            <div class="grupo-meta">${bloco.length} endereço${bloco.length > 1 ? 's' : ''} · Itens ${p * 10 + 1} a ${p * 10 + bloco.length}</div>
+          </div>
+          <button class="btn-pdf" id="btn-${grupoId}" onclick="gerarPDF('${grupoId}','${bairro}',${p})">
+            ⬇ PDF desta página
+          </button>
+        </div>
+        <div class="grupo-map" id="map-${grupoId}"></div>
+        <div class="grupo-table">
+          <table class="endtable">
+            <thead><tr><th>#</th><th>Endereço</th><th>Bairro / Região</th></tr></thead>
+            <tbody>${bloco.map((item, i) => `
+              <tr>
+                <td class="td-num">${p * 10 + i + 1}</td>
+                <td class="td-endereco">${item.endereco}</td>
+                <td class="td-bairro">${item.bairro}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      scroll.appendChild(card);
+
+      // Inicializar mapa leaflet com foco nas ruas
+      setTimeout(() => {
+        const el = document.getElementById('map-' + grupoId);
+        if (!el || mapsBairro[grupoId]) return;
+
+        const m = L.map('map-' + grupoId, { zoomControl: true, scrollWheelZoom: false });
+        
+        // Camada de mapa clara (Voyager) - ideal para leitura
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+          crossOrigin: true
+        }).addTo(m);
+
+        mapsBairro[grupoId] = m;
+        
+        const ocupadosLocal = {};
+        const pontosParaFocar = [];
+
+        bloco.forEach((item, i) => {
+          let lat = item.lat;
+          let lng = item.lng;
+          const chave = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+
+          // Pequeno desvio (jitter) para pins no mesmo endereço
+          if (ocupadosLocal[chave]) {
+            lat += (Math.random() - 0.5) * 0.00015;
+            lng += (Math.random() - 0.5) * 0.00015;
+          }
+          ocupadosLocal[chave] = true;
+          const pos = [lat, lng];
+          pontosParaFocar.push(pos);
+
+          L.marker(pos, { icon: pinIcon(p * 10 + i + 1) })
+            .addTo(m)
+            .bindPopup(`<b>#${p * 10 + i + 1}</b><br>${item.endereco}`);
+        });
+
+        // --- LÓGICA DE ZOOM OTIMIZADA ---
+        if (pontosParaFocar.length > 1) {
+          // Ajusta para mostrar todos os pontos com um padding pequeno (40px)
+          m.fitBounds(L.latLngBounds(pontosParaFocar), { 
+            padding: [40, 40], 
+            maxZoom: 18 
+          });
+
+          // Se o Leaflet escolher um zoom menor que 16 (muito longe), 
+          // nós forçamos o zoom 16 para garantir que o nome da rua apareça.
+          if (m.getZoom() < 16) {
+            m.setZoom(16);
+          }
+        } else if (pontosParaFocar.length === 1) {
+          // Se tiver só um pin, zoom 17 direto (ruas bem visíveis)
+          m.setView(pontosParaFocar[0], 17);
+        }
+      }, 200 + p * 50);
+    }
+  });
+}
+
+// ── PDF ────────────────────────────
+async function gerarPDF(grupoId, bairro, pagina) {
+  const btn = document.getElementById('btn-' + grupoId);
+  if (!btn) return;
+
+  const textoOriginal = btn.textContent;
+  btn.textContent = '⏳ Gerando…'; 
+  btn.disabled = true;
+
+  const mapLeaflet = mapsBairro[grupoId];
+  let mapImgData = "";
+
+  if (mapLeaflet) {
+    try {
+      const mapContainer = mapLeaflet.getContainer();
+      const cloneContainer = mapContainer.cloneNode(true);
+      
+      cloneContainer.style.position = 'fixed';
+      cloneContainer.style.left = '-9999px';
+      cloneContainer.style.top = '0';
+      cloneContainer.style.width = '800px';
+      cloneContainer.style.height = '500px'; 
+      document.body.appendChild(cloneContainer);
+
+      const tempMap = L.map(cloneContainer, {
+        zoomControl: false,
+        attributionControl: false
+      });
+      
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        crossOrigin: true // ESSENCIAL PARA O CHROME PERMITIR A FOTO
+      }).addTo(tempMap);
+
+      const ocupadosTemp = {};
+      const pontosParaZoom = [];
+      const blocoEnderecos = todosEnderecos
+        .filter(d => d.bairro === bairro)
+        .slice(pagina * 10, (pagina + 1) * 10);
+
+      blocoEnderecos.forEach((item, i) => {
+        let tLat = item.lat;
+        let tLng = item.lng;
+        const tChave = `${tLat.toFixed(6)},${tLng.toFixed(6)}`;
+        
+        if (ocupadosTemp[tChave]) {
+          tLat += (Math.random() - 0.5) * 0.00012;
+          tLng += (Math.random() - 0.5) * 0.00012;
+        }
+        ocupadosTemp[tChave] = true;
+        const pos = [tLat, tLng];
+        pontosParaZoom.push(pos);
+
+        // Certifique-child que a função pinIcon está acessível globalmente
+        L.marker(pos, { icon: pinIcon(pagina * 10 + i + 1) }).addTo(tempMap);
+      });
+
+      if (pontosParaZoom.length > 0) {
+        const bounds = L.latLngBounds(pontosParaZoom);
+        tempMap.fitBounds(bounds, {
+          padding: [100, 100], 
+          maxZoom: 18, 
+          animate: false
+        });
+      }
+
+      // Espera um pouco mais para garantir que o mapa claro carregou
+      await new Promise(r => setTimeout(r, 2000));
+
+      const canvas = await html2canvas(cloneContainer, {
+        useCORS: true,
+        scale: 2, 
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      mapImgData = canvas.toDataURL('image/jpeg', 0.95);
+
+      tempMap.remove();
+      document.body.removeChild(cloneContainer);
+
+    } catch (e) {
+      console.error('Falha na captura do mapa:', e);
+    }
+  }
+
+  const pag = pagina + 1;
+  const blocoEnderecos = todosEnderecos.filter(d => d.bairro === bairro).slice(pagina * 10, (pagina + 1) * 10);
+  
+  const linhasHTML = blocoEnderecos.map((item, i) => `
+    <tr>
+      <td style="text-align:center; font-weight:700; color:#f0a500; padding:8px; border-bottom:1px solid #eee;">${pagina * 10 + i + 1}</td>
+      <td style="padding:8px; border-bottom:1px solid #eee; font-weight:500;">${item.endereco}</td>
+      <td style="padding:8px; border-bottom:1px solid #eee; color:#64748b;">${item.bairro}</td>
+    </tr>
+  `).join('');
+
+  const htmlPDF = `
+    <div style="font-family:'DM Sans',Arial,sans-serif; padding:15mm; background:#fff; color:#1a2332; width:180mm;">
+      <div style="border-bottom:2px solid #f0a500; padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+          <h1 style="font-size:18px; margin:0; color:#0a0e14;">📍 Bairro: ${bairro}</h1>
+          <p style="font-size:12px; color:#64748b; margin:5px 0 0;">Página ${pag} — Total ${blocoEnderecos.length} endereços</p>
+        </div>
+      </div>
+      <img src="${mapImgData}" style="width:100%; border-radius:8px; border:1px solid #d1d9e0; display:block; margin-bottom:20px;"/>
+      <table style="width:100%; border-collapse:collapse; font-size:11px;">
+        <thead>
+          <tr style="background:#f8f9fa;">
+            <th style="padding:10px; border-bottom:2px solid #d1d9e0; width:35px;">#</th>
+            <th style="padding:10px; border-bottom:2px solid #d1d9e0; text-align:left;">Endereço</th>
+            <th style="padding:10px; border-bottom:2px solid #d1d9e0; text-align:left;">Bairro</th>
+          </tr>
+        </thead>
+        <tbody>${linhasHTML}</tbody>
+      </table>
+    </div>`;
+
+  const element = document.createElement('div');
+  element.innerHTML = htmlPDF;
+
+  const opt = {
+    margin: 0,
+    filename: `Mapa_${bairro.replace(/\s+/g, '_')}_Pag${pag}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  try {
+    // Chamada correta para o html2pdf
+    await html2pdf().set(opt).from(element).save();
+  } catch (error) {
+    console.error("Erro na geração do PDF:", error);
+    alert("Erro ao gerar o PDF. Verifique o console.");
+  } finally {
+    btn.textContent = textoOriginal;
+    btn.disabled = false;
+  }
+}
+
+async function baixarTodosPDFs() {
+  const btns = document.querySelectorAll('.btn-pdf:not(:disabled)');
+  for (const btn of btns) {
+    btn.click();
+    await new Promise(r=>setTimeout(r,2000));
+  }
+}
+
+// ── Tabs ────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='bairros' && todosEnderecos.length) renderBairros();
+  if(tab==='geral') setTimeout(()=>mapGeral&&mapGeral.invalidateSize(),100);
+}
+
+// ── Init ────────────────────────────
+mapGeral = L.map('map-geral',{zoomControl:true}).setView([-23.608,-52.087],13);
+darkTiles(mapGeral);
+carregarDados();
+</script>
+</body>
+</html>
