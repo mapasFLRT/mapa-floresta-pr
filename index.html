@@ -536,7 +536,6 @@ function renderBairros() {
   const scroll = document.getElementById('bairrosScroll');
   scroll.innerHTML = '';
   
-  // Limpa mapas existentes para evitar lentidão e vazamento de memória
   Object.values(mapsBairro).forEach(m => { try { m.remove(); } catch (e) {} });
   mapsBairro = {};
 
@@ -546,7 +545,6 @@ function renderBairros() {
     return; 
   }
 
-  // Agrupar por bairro para criar os blocos
   const grupos = {};
   dados.forEach(d => {
     const k = d.bairro || 'Sem bairro';
@@ -582,7 +580,7 @@ function renderBairros() {
               <tr>
                 <th>#</th>
                 <th>Endereço</th>
-                <th>Referência</th> <!-- ADICIONADO -->
+                <th>Esquina com</th> <!-- ADICIONADO -->
                 <th>Bairro / Região</th>
               </tr>
             </thead>
@@ -590,72 +588,42 @@ function renderBairros() {
               <tr>
                 <td class="td-num">${p * 10 + i + 1}</td>
                 <td class="td-endereco">${item.endereco}</td>
-                <td class="td-esquina" style="font-size: 0.75rem; color: var(--muted2);">${item.esquina || '-'}</td> <!-- ADICIONADO -->
+                <td style="font-size: 0.75rem; color: var(--muted2);">${item.esquina || '-'}</td> <!-- ADICIONADO -->
                 <td class="td-bairro">${item.bairro}</td>
               </tr>`).join('')}
             </tbody>
           </table>
-        </div>
+        </div>`; // TAG FECHADA CORRETAMENTE AQUI
       scroll.appendChild(card);
 
-      // Inicializar mapa leaflet com foco nas ruas
       setTimeout(() => {
         const el = document.getElementById('map-' + grupoId);
         if (!el || mapsBairro[grupoId]) return;
-
         const m = L.map('map-' + grupoId, { zoomControl: true, scrollWheelZoom: false });
-        
-        // Camada de mapa clara (Voyager) - ideal para leitura
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          crossOrigin: true
-        }).addTo(m);
-
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { crossOrigin: true }).addTo(m);
         mapsBairro[grupoId] = m;
-        
         const ocupadosLocal = {};
         const pontosParaFocar = [];
-
         bloco.forEach((item, i) => {
-          let lat = item.lat;
-          let lng = item.lng;
+          let lat = item.lat; let lng = item.lng;
           const chave = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-
-          // Pequeno desvio (jitter) para pins no mesmo endereço
-          if (ocupadosLocal[chave]) {
-            lat += (Math.random() - 0.5) * 0.00015;
-            lng += (Math.random() - 0.5) * 0.00015;
-          }
+          if (ocupadosLocal[chave]) { lat += (Math.random() - 0.5) * 0.00015; lng += (Math.random() - 0.5) * 0.00015; }
           ocupadosLocal[chave] = true;
           const pos = [lat, lng];
           pontosParaFocar.push(pos);
-
-          L.marker(pos, { icon: pinIcon(p * 10 + i + 1) })
-            .addTo(m)
-            .bindPopup(`<b>#${p * 10 + i + 1}</b><br>${item.endereco}`);
+          L.marker(pos, { icon: pinIcon(p * 10 + i + 1) }).addTo(m).bindPopup(`<b>#${p * 10 + i + 1}</b><br>${item.endereco}`);
         });
-
-        // --- LÓGICA DE ZOOM OTIMIZADA ---
         if (pontosParaFocar.length > 1) {
-          // Ajusta para mostrar todos os pontos com um padding pequeno (40px)
-          m.fitBounds(L.latLngBounds(pontosParaFocar), { 
-            padding: [40, 40], 
-            maxZoom: 18 
-          });
-
-          // Se o Leaflet escolher um zoom menor que 16 (muito longe), 
-          // nós forçamos o zoom 16 para garantir que o nome da rua apareça.
-          if (m.getZoom() < 16) {
-            m.setZoom(16);
-          }
+          m.fitBounds(L.latLngBounds(pontosParaFocar), { padding: [40, 40], maxZoom: 18 });
+          if (m.getZoom() < 16) m.setZoom(16);
         } else if (pontosParaFocar.length === 1) {
-          // Se tiver só um pin, zoom 17 direto (ruas bem visíveis)
           m.setView(pontosParaFocar[0], 17);
         }
       }, 200 + p * 50);
     }
   });
 }
-
+    
 // ── PDF ────────────────────────────
 async function gerarPDF(grupoId, bairro, pagina) {
   const btn = document.getElementById('btn-' + grupoId);
@@ -762,7 +730,7 @@ async function gerarPDF(grupoId, bairro, pagina) {
       </tr>
   `).join('');
 
-  const htmlPDF = `
+ const htmlPDF = `
       <div style="font-family:'DM Sans',Arial,sans-serif; padding:10mm; background:#fff; color:#1a2332; width:190mm;">
         <div style="border-bottom:2px solid #f0a500; padding-bottom:8px; margin-bottom:10px;">
           <h1 style="font-size:16px; margin:0;">📍 Bairro: ${bairro} — Página ${pag}</h1>
