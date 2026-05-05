@@ -423,12 +423,15 @@ function renderGeralLista(dados) {
   document.getElementById('countGeral').textContent = dados.length;
   const lista = document.getElementById('listaGeral');
   if (!dados.length) { lista.innerHTML='<div class="empty">Nenhum resultado.</div>'; return; }
-  lista.innerHTML = dados.map((item,i)=>`
+  
+  lista.innerHTML = dados.map((item, i) => `
     <div class="list-item" id="gi-${item._idx}" onclick="focarGeral(${item._idx})">
       <div class="list-num">${i+1}</div>
       <div class="list-info">
         <div class="addr">${item.endereco}</div>
-        <div class="bairro">${item.bairro}</div>
+        <div class="bairro">
+          ${item.bairro} ${item.esquina ? ' • <small style="color:var(--accent3)">Esq. ' + item.esquina + '</small>' : ''}
+        </div>
       </div>
     </div>`).join('');
 }
