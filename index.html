@@ -172,45 +172,35 @@ async function carregarDados() {
             return;
         }
 
-        // ── DETECTAR COLUNAS PELO CABEÇALHO ──────────────────────────────────
-        // Isso garante que qualquer ordem de colunas na planilha funciona
-        const headers = linhas[0].map(h => h.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+        // --- ÍNDICES FIXOS (Baseados na sua imagem image_f27018.png) ---
+        const INDEX = {
+            endereco: 0, // Coluna A
+            bairro:   1, // Coluna B
+            lat:      3, // Coluna D
+            lng:      4, // Coluna E
+            data:     5, // Coluna F
+            esquina:  6  // Coluna G (Esquina com)
+        };
 
-        // Mapeia cada campo pelo nome da coluna no cabeçalho
-        COL.endereco = headers.findIndex(h => h.includes('endereco') || h.includes('endere'));
-        COL.bairro   = headers.findIndex(h => h.includes('bairro'));
-        COL.lat      = headers.findIndex(h => h.includes('lat'));
-        COL.lng      = headers.findIndex(h => h.includes('lng') || h.includes('lon') || h.includes('long'));
-        COL.data     = headers.findIndex(h => h.includes('data') || h.includes('atualiz'));
-        COL.esquina  = headers.findIndex(h => h.includes('esquina') || h.includes('cruzamento') || h.includes('referenc'));
+        // Atualiza data de atualização no cabeçalho
+        const dataVal = linhas[1][INDEX.data] || '—';
+        document.getElementById('updateDate').textContent = dataVal;
 
-        // Fallback para índices fixos se o cabeçalho não for encontrado
-        if (COL.endereco < 0) COL.endereco = 0;
-        if (COL.bairro   < 0) COL.bairro   = 1;
-        if (COL.lat      < 0) COL.lat       = 3;
-        if (COL.lng      < 0) COL.lng       = 4;
-        if (COL.data     < 0) COL.data      = 5;
-        // esquina fica -1 se não encontrado (tratado abaixo)
-
-        // Atualiza data
-        const dataVal = linhas[1] && COL.data >= 0 ? linhas[1][COL.data] : '';
-        document.getElementById('updateDate').textContent = dataVal || '—';
-
-        // Processa linhas de dados
+        // Processa as linhas
         todosEnderecos = linhas.slice(1).map((c, i) => {
-            const esquinaVal = (COL.esquina >= 0 && c[COL.esquina]) ? c[COL.esquina].trim() : '';
             return {
                 _idx: i,
-                endereco: (c[COL.endereco] || '').trim(),
-                bairro:   (c[COL.bairro]   || '').trim(),
-                esquina:  esquinaVal,
-                lat:      parseBr(c[COL.lat]),
-                lng:      parseBr(c[COL.lng])
+                endereco: (c[INDEX.endereco] || '').trim(),
+                bairro:   (c[INDEX.bairro]   || '').trim(),
+                esquina:  (c[INDEX.esquina]  || '').trim(), // Captura direta da coluna G
+                lat:      parseBr(c[INDEX.lat]),
+                lng:      parseBr(c[INDEX.lng])
             };
         }).filter(d => d.lat && d.lng && d.endereco);
 
         setStatus('ok', `${todosEnderecos.length} endereços`);
         document.getElementById('loadingGeral').style.display = 'none';
+        
         popularSelectBairro();
         renderGeralLista(todosEnderecos);
         renderGeralMarcadores(todosEnderecos);
@@ -218,7 +208,7 @@ async function carregarDados() {
     } catch (e) {
         console.error(e);
         setStatus('error', 'Falha ao carregar');
-        document.getElementById('loadingGeral').innerHTML = `<p style="color:#e53e3e;font-size:.85rem;">Erro: ${e.message}</p>`;
+        document.getElementById('loadingGeral').style.display = 'none';
     }
 }
 
