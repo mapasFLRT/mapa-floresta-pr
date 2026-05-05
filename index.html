@@ -131,6 +131,7 @@ function pinIcon(num) {
     });
 }
 
+
 async function carregarDados() {
     setStatus('loading', 'Carregando...');
     try {
@@ -141,19 +142,18 @@ async function carregarDados() {
 
         document.getElementById('updateDate').textContent = (linhas[1] && linhas[1][5]) ? linhas[1][5] : '—';
 
-        todosEnderecos = linhas.slice(1).map((c, i) => {
-            // Verificamos se a coluna G (índice 6) existe, se não, tentamos a anterior
-            const refEsquina = c[6] ? c[6].trim() : (c[c.length - 1] || ''); 
-            
-            return {
-                _idx: i,
-                endereco: c[0] || '',
-                bairro: c[1] || '',
-                esquina: refEsquina, 
-                lat: parseBr(c[3]),
-                lng: parseBr(c[4])
-            };
-        }).filter(d => d.lat && d.lng);
+        // FIX 1: detectar coluna pelo cabeçalho
+        const headers = linhas[0].map(h => h.trim().toLowerCase());
+        const iEsquina = headers.findIndex(h => h.includes('esquina'));
+
+        todosEnderecos = linhas.slice(1).map((c, i) => ({
+            _idx: i,
+            endereco: c[0] || '',
+            bairro: c[1] || '',
+            esquina: (iEsquina >= 0 && c[iEsquina]) ? c[iEsquina].trim() : '',
+            lat: parseBr(c[3]),
+            lng: parseBr(c[4])
+        })).filter(d => d.lat && d.lng);
 
         setStatus('ok', `${todosEnderecos.length} endereços`);
         document.getElementById('loadingGeral').style.display = 'none';
@@ -165,27 +165,32 @@ async function carregarDados() {
     }
 }
 
+
 function renderGeralLista(dados) {
     const lista = document.getElementById('listaGeral');
     lista.innerHTML = dados.map((d, i) => `
         <div class="list-item" onclick="focarGeral(${d._idx})">
             <div style="font-weight:700; font-size:0.85rem;">${i+1}. ${d.endereco}</div>
-            <div style="font-size:0.7rem; color:var(--muted);">${d.bairro} ${d.esquina ? '• Esq. ' + d.esquina : ''}</div>
+            <div style="font-size:0.7rem; color:var(--muted);">${d.bairro}</div>
+            ${d.esquina ? `<div style="font-size:0.7rem; color:var(--accent2);">⤷ Esq. ${d.esquina}</div>` : ''}
         </div>
     `).join('');
 }
+
 
 function renderGeralMarcadores(dados) {
     marcadoresGeral.forEach(m => mapGeral.removeLayer(m));
     marcadoresGeral = [];
     dados.forEach((d, i) => {
+        const popup = `<b>${d.endereco}</b><br>${d.bairro}` 
+            + (d.esquina ? `<br><small>Esq. ${d.esquina}</small>` : '');
         const m = L.marker([d.lat, d.lng], {icon: pinIcon(i+1)}).addTo(mapGeral);
-        m.bindPopup(`<b>${d.endereco}</b><br>${d.bairro}`);
+        m.bindPopup(popup);
         marcadoresGeral.push(m);
     });
     if(dados.length) mapGeral.fitBounds(L.latLngBounds(dados.map(d=>[d.lat,d.lng])), {padding:[40,40]});
 }
-
+    
 function focarGeral(idx) {
     const d = todosEnderecos.find(x => x._idx === idx);
     if(d) mapGeral.setView([d.lat, d.lng], 17);
