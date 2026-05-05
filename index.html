@@ -43,7 +43,8 @@
 <script>
 const SHEET_ID = '1k5wdMKhvl5Klz_dX5iKmR5_n2uJlrqXy3bPrhA3rQYg';
 // Forçamos o Google a entregar todas as colunas possíveis até a letra J
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0&range=A1:J200&t=` + Date.now();
+// Adicionamos 'usp=sharing' e mudamos a ordem para enganar o cache do servidor
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&usp=sharing&range=A1:J200&gid=0&cachebuster=` + Date.now();
 
 let mapa = L.map('map').setView([-23.608, -52.087], 14);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mapa);
