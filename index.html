@@ -24,10 +24,12 @@
         .brand{display:flex;align-items:center;gap:12px;}
         .brand-icon{width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:20px;}
         .brand-name{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;}
+        .header-right{display:flex;align-items:center;gap:12px;}
         .update-badge{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;font-size:.78rem;}
         .status-chip{display:flex;align-items:center;gap:6px;font-size:.78rem;}
         .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);animation:blink 2s infinite;}
         .dot.loading{background:var(--accent);}
+        .dot.error{background:#e53e3e;}
         @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
         .tabs{height:var(--tab-h);display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;}
         .tab{display:flex;align-items:center;padding:0 18px;font-size:.84rem;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted2);}
@@ -37,30 +39,41 @@
         .panel.active{display:flex;}
         .sidebar{width:290px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;}
         .sidebar-top{padding:14px 18px;border-bottom:1px solid var(--border);}
-        .search input{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;outline:none;}
+        .search input{width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;outline:none;font-family:'DM Sans',sans-serif;}
         .list{flex:1;overflow-y:auto;}
-        .list-item{padding:10px 18px;cursor:pointer;border-bottom:1px solid #f0f0f0;}
+        .list-item{padding:10px 18px;cursor:pointer;border-bottom:1px solid #f0f0f0;transition:background .15s;}
+        .list-item:hover{background:#fafafa;}
         .list-item.active{background:rgba(240,165,0,0.08);border-left:3px solid var(--accent);}
+        .item-num{font-weight:700;font-size:0.85rem;color:var(--text);}
+        .item-bairro{font-size:0.72rem;color:var(--muted);margin-top:2px;}
+        .item-esquina{font-size:0.72rem;color:var(--accent2);margin-top:1px;}
         .map-wrap{flex:1;position:relative;}
         #map-geral{width:100%;height:100%;}
         #panel-bairros{flex-direction:column;}
         .bairro-toolbar{padding:10px 20px;background:#fff;border-bottom:1px solid #ddd;display:flex;gap:10px;align-items:center;}
+        .bairro-toolbar select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.85rem;}
         .bairros-scroll{flex:1;overflow-y:auto;padding:20px;}
         .grupo-card{background:#fff;border:1px solid #ddd;border-radius:12px;margin-bottom:25px;overflow:hidden;}
         .grupo-header{padding:15px;background:#f9f9f9;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;}
+        .btn-pdf{padding:6px 14px;background:var(--accent);border:none;border-radius:6px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:700;}
         .grupo-map{height:350px;width:100%;}
         .endtable{width:100%;border-collapse:collapse;font-size:0.85rem;}
-        .endtable th{background:#f4f4f4;padding:10px;text-align:left;font-size:0.7rem;text-transform:uppercase;color:var(--muted);}
+        .endtable th{background:#f4f4f4;padding:10px;text-align:left;font-size:0.7rem;text-transform:uppercase;color:var(--muted);border-bottom:2px solid #eee;}
         .endtable td{padding:10px;border-bottom:1px solid #eee;}
-        .loading-overlay{position:absolute;inset:0;background:rgba(255,255,255,0.8);z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+        .endtable tr:last-child td{border-bottom:none;}
+        .loading-overlay{position:absolute;inset:0;background:rgba(255,255,255,0.9);z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;}
         .spinner{width:40px;height:40px;border:4px solid #f3f3f3;border-top:4px solid var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
         @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+        .debug-box{background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 12px;font-size:.75rem;margin:10px 20px;}
     </style>
 </head>
 <body>
 
 <header>
-    <div class="brand"><div class="brand-icon">📍</div><div class="brand-name">Mapa Floresta PR</div></div>
+    <div class="brand">
+        <div class="brand-icon">📍</div>
+        <div class="brand-name">Mapa Floresta PR</div>
+    </div>
     <div class="header-right">
         <div class="update-badge">Atualização: <span id="updateDate">—</span></div>
         <div class="status-chip"><div class="dot loading" id="statusDot"></div> <span id="statusText">Buscando...</span></div>
@@ -75,30 +88,44 @@
 <div class="app-body">
     <div class="panel active" id="panel-geral">
         <div class="sidebar">
-            <div class="sidebar-top"><input type="text" id="searchGeral" placeholder="Buscar..." oninput="filtrarGeral()"/></div>
+            <div class="sidebar-top">
+                <div class="search"><input type="text" id="searchGeral" placeholder="Buscar endereço..." oninput="filtrarGeral()"/></div>
+            </div>
             <div class="list" id="listaGeral"></div>
         </div>
         <div class="map-wrap">
             <div id="map-geral"></div>
-            <div class="loading-overlay" id="loadingGeral"><div class="spinner"></div><p>Carregando dados...</p></div>
+            <div class="loading-overlay" id="loadingGeral">
+                <div class="spinner"></div>
+                <p style="font-size:.9rem;color:var(--muted);">Carregando dados...</p>
+            </div>
         </div>
     </div>
     <div class="panel" id="panel-bairros">
-        <div class="bairro-toolbar"><select id="bairroSelect" onchange="renderBairros()"><option value="">Todos os Bairros</option></select></div>
+        <div class="bairro-toolbar">
+            <select id="bairroSelect" onchange="renderBairros()">
+                <option value="">Todos os Bairros</option>
+            </select>
+        </div>
         <div class="bairros-scroll" id="bairrosScroll"></div>
     </div>
 </div>
 
 <script>
-// Forçamos o intervalo A:G para garantir a captura da nova coluna
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
 const SHEET_ID = '1i8jO65wCCTW_R2FcY-O0f_EvOEqOq2BYFTplZtw8kU8';
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0&range=A:G`;
+// Range A:H para garantir captura de todas as colunas incluindo "Esquina com"
+const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0&range=A:H`;
 
 let todosEnderecos = [];
 let mapGeral = null;
 let marcadoresGeral = [];
 let mapsBairro = {};
 
+// Índices das colunas — serão detectados automaticamente pelo cabeçalho
+let COL = { endereco: 0, bairro: 1, esquina: -1, lat: 3, lng: 4, data: 5 };
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
 function setStatus(tipo, msg) {
     document.getElementById('statusDot').className = 'dot ' + tipo;
     document.getElementById('statusText').textContent = msg;
@@ -126,12 +153,12 @@ function csvParse(text) {
 function pinIcon(num) {
     return L.divIcon({
         className: '',
-        html: `<div style="background:#f0a500; width:24px; height:24px; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:bold; color:black; box-shadow:0 2px 4px rgba(0,0,0,0.3)">${num}</div>`,
-        iconSize:[24,24], iconAnchor:[12,12]
+        html: `<div style="background:#f0a500;width:24px;height:24px;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:black;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${num}</div>`,
+        iconSize: [24,24], iconAnchor: [12,12]
     });
 }
 
-
+// ─── CARREGAR DADOS ───────────────────────────────────────────────────────────
 async function carregarDados() {
     setStatus('loading', 'Carregando...');
     try {
@@ -140,66 +167,119 @@ async function carregarDados() {
         const csv = await r.text();
         const linhas = csvParse(csv);
 
-        document.getElementById('updateDate').textContent = (linhas[1] && linhas[1][5]) ? linhas[1][5] : '—';
+        if (!linhas || linhas.length < 2) {
+            setStatus('error', 'Planilha vazia');
+            return;
+        }
 
-        // FIX 1: detectar coluna pelo cabeçalho
-        const headers = linhas[0].map(h => h.trim().toLowerCase());
-        const iEsquina = headers.findIndex(h => h.includes('esquina'));
+        // ── DETECTAR COLUNAS PELO CABEÇALHO ──────────────────────────────────
+        // Isso garante que qualquer ordem de colunas na planilha funciona
+        const headers = linhas[0].map(h => h.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
 
-        todosEnderecos = linhas.slice(1).map((c, i) => ({
-            _idx: i,
-            endereco: c[0] || '',
-            bairro: c[1] || '',
-            esquina: (iEsquina >= 0 && c[iEsquina]) ? c[iEsquina].trim() : '',
-            lat: parseBr(c[3]),
-            lng: parseBr(c[4])
-        })).filter(d => d.lat && d.lng);
+        // Mapeia cada campo pelo nome da coluna no cabeçalho
+        COL.endereco = headers.findIndex(h => h.includes('endereco') || h.includes('endere'));
+        COL.bairro   = headers.findIndex(h => h.includes('bairro'));
+        COL.lat      = headers.findIndex(h => h.includes('lat'));
+        COL.lng      = headers.findIndex(h => h.includes('lng') || h.includes('lon') || h.includes('long'));
+        COL.data     = headers.findIndex(h => h.includes('data') || h.includes('atualiz'));
+        COL.esquina  = headers.findIndex(h => h.includes('esquina') || h.includes('cruzamento') || h.includes('referenc'));
+
+        // Fallback para índices fixos se o cabeçalho não for encontrado
+        if (COL.endereco < 0) COL.endereco = 0;
+        if (COL.bairro   < 0) COL.bairro   = 1;
+        if (COL.lat      < 0) COL.lat       = 3;
+        if (COL.lng      < 0) COL.lng       = 4;
+        if (COL.data     < 0) COL.data      = 5;
+        // esquina fica -1 se não encontrado (tratado abaixo)
+
+        // Atualiza data
+        const dataVal = linhas[1] && COL.data >= 0 ? linhas[1][COL.data] : '';
+        document.getElementById('updateDate').textContent = dataVal || '—';
+
+        // Processa linhas de dados
+        todosEnderecos = linhas.slice(1).map((c, i) => {
+            const esquinaVal = (COL.esquina >= 0 && c[COL.esquina]) ? c[COL.esquina].trim() : '';
+            return {
+                _idx: i,
+                endereco: (c[COL.endereco] || '').trim(),
+                bairro:   (c[COL.bairro]   || '').trim(),
+                esquina:  esquinaVal,
+                lat:      parseBr(c[COL.lat]),
+                lng:      parseBr(c[COL.lng])
+            };
+        }).filter(d => d.lat && d.lng && d.endereco);
 
         setStatus('ok', `${todosEnderecos.length} endereços`);
         document.getElementById('loadingGeral').style.display = 'none';
         popularSelectBairro();
         renderGeralLista(todosEnderecos);
         renderGeralMarcadores(todosEnderecos);
+
     } catch (e) {
+        console.error(e);
         setStatus('error', 'Falha ao carregar');
+        document.getElementById('loadingGeral').innerHTML = `<p style="color:#e53e3e;font-size:.85rem;">Erro: ${e.message}</p>`;
     }
 }
 
-
+// ─── LISTA LATERAL (VISÃO GERAL) ──────────────────────────────────────────────
 function renderGeralLista(dados) {
     const lista = document.getElementById('listaGeral');
+    if (!dados.length) {
+        lista.innerHTML = '<p style="padding:20px;color:var(--muted);font-size:.85rem;">Nenhum endereço encontrado.</p>';
+        return;
+    }
     lista.innerHTML = dados.map((d, i) => `
         <div class="list-item" onclick="focarGeral(${d._idx})">
-            <div style="font-weight:700; font-size:0.85rem;">${i+1}. ${d.endereco}</div>
-            <div style="font-size:0.7rem; color:var(--muted);">${d.bairro}</div>
-            ${d.esquina ? `<div style="font-size:0.7rem; color:var(--accent2);">⤷ Esq. ${d.esquina}</div>` : ''}
+            <div class="item-num">${i+1}. ${d.endereco}</div>
+            <div class="item-bairro">${d.bairro}</div>
+            ${d.esquina ? `<div class="item-esquina">⤷ Esq. ${d.esquina}</div>` : ''}
         </div>
     `).join('');
 }
 
-
+// ─── MARCADORES NO MAPA GERAL ─────────────────────────────────────────────────
 function renderGeralMarcadores(dados) {
     marcadoresGeral.forEach(m => mapGeral.removeLayer(m));
     marcadoresGeral = [];
     dados.forEach((d, i) => {
-        const popup = `<b>${d.endereco}</b><br>${d.bairro}` 
-            + (d.esquina ? `<br><small>Esq. ${d.esquina}</small>` : '');
+        const popup = `<b>${d.endereco}</b><br><span style="color:#64748b">${d.bairro}</span>`
+            + (d.esquina ? `<br><span style="color:#e05c2a;font-size:0.8em">Esq. ${d.esquina}</span>` : '');
         const m = L.marker([d.lat, d.lng], {icon: pinIcon(i+1)}).addTo(mapGeral);
         m.bindPopup(popup);
         marcadoresGeral.push(m);
     });
-    if(dados.length) mapGeral.fitBounds(L.latLngBounds(dados.map(d=>[d.lat,d.lng])), {padding:[40,40]});
-}
-    
-function focarGeral(idx) {
-    const d = todosEnderecos.find(x => x._idx === idx);
-    if(d) mapGeral.setView([d.lat, d.lng], 17);
+    if (dados.length) {
+        mapGeral.fitBounds(L.latLngBounds(dados.map(d => [d.lat, d.lng])), {padding: [40,40]});
+    }
 }
 
+function focarGeral(idx) {
+    const d = todosEnderecos.find(x => x._idx === idx);
+    if (d) {
+        mapGeral.setView([d.lat, d.lng], 17);
+        marcadoresGeral[todosEnderecos.indexOf(d)]?.openPopup();
+    }
+}
+
+function filtrarGeral() {
+    const q = document.getElementById('searchGeral').value.toLowerCase();
+    const filtrado = q
+        ? todosEnderecos.filter(d =>
+            d.endereco.toLowerCase().includes(q) ||
+            d.bairro.toLowerCase().includes(q) ||
+            d.esquina.toLowerCase().includes(q))
+        : todosEnderecos;
+    renderGeralLista(filtrado);
+    renderGeralMarcadores(filtrado);
+}
+
+// ─── ABA POR BAIRRO ───────────────────────────────────────────────────────────
 function popularSelectBairro() {
-    const bairros = [...new Set(todosEnderecos.map(d=>d.bairro))].sort();
+    const bairros = [...new Set(todosEnderecos.map(d => d.bairro))].sort();
     const sel = document.getElementById('bairroSelect');
-    sel.innerHTML = '<option value="">Todos os Bairros</option>' + bairros.map(b=>`<option value="${b}">${b}</option>`).join('');
+    sel.innerHTML = '<option value="">Todos os Bairros</option>'
+        + bairros.map(b => `<option value="${b}">${b}</option>`).join('');
 }
 
 function renderBairros() {
@@ -211,62 +291,119 @@ function renderBairros() {
 
     const dados = filtro ? todosEnderecos.filter(d => d.bairro === filtro) : todosEnderecos;
     const grupos = {};
-    dados.forEach(d => { if(!grupos[d.bairro]) grupos[d.bairro] = []; grupos[d.bairro].push(d); });
+    dados.forEach(d => { if (!grupos[d.bairro]) grupos[d.bairro] = []; grupos[d.bairro].push(d); });
 
     Object.entries(grupos).forEach(([bairro, items]) => {
         const totalPags = Math.ceil(items.length / 10);
         for (let p = 0; p < totalPags; p++) {
-            const bloco = items.slice(p*10, (p+1)*10);
-            const grupoId = `g_${bairro.replace(/\s/g,'')}_${p}`;
+            const bloco = items.slice(p * 10, (p + 1) * 10);
+            const grupoId = `g_${bairro.replace(/\W/g,'')}_${p}`;
             const card = document.createElement('div');
             card.className = 'grupo-card';
             card.innerHTML = `
-                <div class="grupo-header"><strong>📍 ${bairro} (Pág ${p+1})</strong> <button class="btn-pdf" onclick="gerarPDF('${grupoId}','${bairro}',${p})">Gerar PDF</button></div>
+                <div class="grupo-header">
+                    <strong>📍 ${bairro} (Pág ${p+1})</strong>
+                    <button class="btn-pdf" onclick="gerarPDF('${grupoId}','${bairro}',${p})">⬇ Gerar PDF</button>
+                </div>
                 <div id="${grupoId}" class="grupo-map"></div>
                 <div class="grupo-table">
                     <table class="endtable">
-                        <thead><tr><th>#</th><th>Endereço</th><th>Referência</th><th>Bairro</th></tr></thead>
-                        <tbody>${bloco.map((b,i)=>`<tr><td>${p*10+i+1}</td><td>${b.endereco}</td><td>${b.esquina||'-'}</td><td>${b.bairro}</td></tr>`).join('')}</tbody>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Endereço</th>
+                                <th>Esquina com</th>
+                                <th>Bairro</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${bloco.map((b, i) => `
+                                <tr>
+                                    <td>${p*10+i+1}</td>
+                                    <td>${b.endereco}</td>
+                                    <td>${b.esquina || '—'}</td>
+                                    <td>${b.bairro}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
                     </table>
                 </div>`;
             scroll.appendChild(card);
+
             setTimeout(() => {
-                const m = L.map(grupoId, {zoomControl:false}).setView([bloco[0].lat, bloco[0].lng], 16);
+                const m = L.map(grupoId, {zoomControl: false}).setView([bloco[0].lat, bloco[0].lng], 16);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(m);
-                bloco.forEach((b, i) => L.marker([b.lat, b.lng], {icon: pinIcon(p*10+i+1)}).addTo(m));
-                m.fitBounds(L.latLngBounds(bloco.map(b=>[b.lat,b.lng])), {padding:[50,50], maxZoom:17});
+                bloco.forEach((b, i) => L.marker([b.lat, b.lng], {icon: pinIcon(p*10+i+1)}).addTo(m)
+                    .bindPopup(`<b>${b.endereco}</b>${b.esquina ? '<br>Esq. ' + b.esquina : ''}`));
+                m.fitBounds(L.latLngBounds(bloco.map(b => [b.lat, b.lng])), {padding: [50,50], maxZoom: 17});
                 mapsBairro[grupoId] = m;
             }, 300);
         }
     });
 }
 
+// ─── GERAR PDF ────────────────────────────────────────────────────────────────
 async function gerarPDF(id, bairro, pagina) {
-    const bloco = todosEnderecos.filter(d => d.bairro === bairro).slice(pagina*10, (pagina+1)*10);
-    const canvas = await html2canvas(document.getElementById(id), {useCORS: true, scale: 2});
+    const bloco = todosEnderecos
+        .filter(d => d.bairro === bairro)
+        .slice(pagina * 10, (pagina + 1) * 10);
+
+    const mapEl = document.getElementById(id);
+    const canvas = await html2canvas(mapEl, {useCORS: true, scale: 2});
     const mapImg = canvas.toDataURL('image/jpeg', 0.95);
 
+    const linhas = bloco.map((b, i) => `
+        <tr style="border-bottom:1px solid #ddd;">
+            <td style="padding:7px 8px;text-align:center;font-weight:bold;">${pagina*10+i+1}</td>
+            <td style="padding:7px 8px;">${b.endereco}</td>
+            <td style="padding:7px 8px;color:#e05c2a;">${b.esquina || '—'}</td>
+            <td style="padding:7px 8px;">${b.bairro}</td>
+        </tr>
+    `).join('');
+
     const html = `
-        <div style="padding:15mm; font-family:sans-serif;">
-            <h1 style="font-size:16px;">📍 ${bairro} (Pág ${pagina+1})</h1>
-            <img src="${mapImg}" style="width:100%; border:1px solid #ddd; margin-bottom:15px;"/>
-            <table style="width:100%; border-collapse:collapse; font-size:10px;">
-                <thead><tr style="background:#eee;"><th>#</th><th>Endereço</th><th>Referência</th><th>Bairro</th></tr></thead>
-                <tbody>${bloco.map((b,i)=>`<tr style="border-bottom:1px solid #ddd;"><td>${pagina*10+i+1}</td><td>${b.endereco}</td><td>${b.esquina||'-'}</td><td>${b.bairro}</td></tr>`).join('')}</tbody>
+        <div style="padding:12mm 15mm;font-family:Arial,sans-serif;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+                <div style="background:linear-gradient(135deg,#f0a500,#e05c2a);width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;">📍</div>
+                <div>
+                    <div style="font-size:16px;font-weight:bold;">Mapa Floresta PR</div>
+                    <div style="font-size:11px;color:#64748b;">${bairro} — Página ${pagina+1}</div>
+                </div>
+            </div>
+            <img src="${mapImg}" style="width:100%;border:1px solid #ddd;border-radius:6px;margin-bottom:14px;"/>
+            <table style="width:100%;border-collapse:collapse;font-size:10px;">
+                <thead>
+                    <tr style="background:#f4f4f4;">
+                        <th style="padding:8px;text-align:center;border-bottom:2px solid #ddd;width:30px;">#</th>
+                        <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Endereço</th>
+                        <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Esquina com</th>
+                        <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">Bairro</th>
+                    </tr>
+                </thead>
+                <tbody>${linhas}</tbody>
             </table>
         </div>`;
-    
-    const worker = html2pdf().set({margin:0, filename:`Mapa_${bairro}.pdf`, jsPDF:{unit:'mm', format:'a4'}});
-    worker.from(html).save();
+
+    html2pdf()
+        .set({
+            margin: 0,
+            filename: `Mapa_${bairro.replace(/\s/g,'_')}_pag${pagina+1}.pdf`,
+            jsPDF: {unit: 'mm', format: 'a4', orientation: 'portrait'},
+            html2canvas: {scale: 2, useCORS: true}
+        })
+        .from(html)
+        .save();
 }
 
+// ─── NAVEGAÇÃO ENTRE ABAS ─────────────────────────────────────────────────────
 function switchTab(tab) {
     document.querySelectorAll('.tab, .panel').forEach(el => el.classList.remove('active'));
-    document.getElementById('tab-'+tab).classList.add('active');
-    document.getElementById('panel-'+tab).classList.add('active');
-    if(tab==='bairros') renderBairros();
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('panel-' + tab).classList.add('active');
+    if (tab === 'bairros') renderBairros();
 }
 
+// ─── INIT ─────────────────────────────────────────────────────────────────────
 mapGeral = L.map('map-geral').setView([-23.608, -52.087], 13);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(mapGeral);
 carregarDados();
