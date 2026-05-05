@@ -578,16 +578,24 @@ function renderBairros() {
         <div class="grupo-map" id="map-${grupoId}"></div>
         <div class="grupo-table">
           <table class="endtable">
-            <thead><tr><th>#</th><th>Endereço</th><th>Bairro / Região</th></tr></thead>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Endereço</th>
+                <th>Referência</th> <!-- ADICIONADO -->
+                <th>Bairro / Região</th>
+              </tr>
+            </thead>
             <tbody>${bloco.map((item, i) => `
               <tr>
                 <td class="td-num">${p * 10 + i + 1}</td>
                 <td class="td-endereco">${item.endereco}</td>
+                <td class="td-esquina" style="font-size: 0.75rem; color: var(--muted2);">${item.esquina || '-'}</td> <!-- ADICIONADO -->
                 <td class="td-bairro">${item.bairro}</td>
               </tr>`).join('')}
             </tbody>
           </table>
-        </div>`;
+        </div>
       scroll.appendChild(card);
 
       // Inicializar mapa leaflet com foco nas ruas
@@ -755,23 +763,23 @@ async function gerarPDF(grupoId, bairro, pagina) {
   `).join('');
 
   const htmlPDF = `
-    <div style="font-family:'DM Sans',Arial,sans-serif; padding:10mm; background:#fff; color:#1a2332; width:190mm;">
-      <div style="border-bottom:2px solid #f0a500; padding-bottom:8px; margin-bottom:10px;">
-        <h1 style="font-size:16px; margin:0;">📍 Bairro: ${bairro} — Página ${pag}</h1>
-      </div>
-      <img src="${mapImgData}" style="width:100%; border-radius:4px; border:1px solid #d1d9e0; display:block; margin-bottom:15px;"/>
-      <table style="width:100%; border-collapse:collapse; font-size:10px;">
-          <thead>
-            <tr style="background:#f8f9fa;">
-            <th style="padding:8px; border-bottom:2px solid #d1d9e0; width:30px;">#</th>
-            <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Endereço</th>
-            <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Referência (Esquina)</th>
-             th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Bairro</th>
-            </tr>
-          </thead>
-          <tbody>${linhasHTML}</tbody>
-        </table>
-    </div>`;
+      <div style="font-family:'DM Sans',Arial,sans-serif; padding:10mm; background:#fff; color:#1a2332; width:190mm;">
+        <div style="border-bottom:2px solid #f0a500; padding-bottom:8px; margin-bottom:10px;">
+          <h1 style="font-size:16px; margin:0;">📍 Bairro: ${bairro} — Página ${pag}</h1>
+        </div>
+        <img src="${mapImgData}" style="width:100%; border-radius:4px; border:1px solid #d1d9e0; display:block; margin-bottom:15px;"/>
+        <table style="width:100%; border-collapse:collapse; font-size:10px;">
+            <thead>
+              <tr style="background:#f8f9fa;">
+                <th style="padding:8px; border-bottom:2px solid #d1d9e0; width:30px;">#</th>
+                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Endereço</th>
+                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Referência (Esquina)</th>
+                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Bairro</th> <!-- CORRIGIDO AQUI -->
+              </tr>
+            </thead>
+            <tbody>${linhasHTML}</tbody>
+          </table>
+      </div>`;
 
   const element = document.createElement('div');
   element.innerHTML = htmlPDF;
