@@ -380,15 +380,20 @@ async function carregarDados() {
 
     const linhas = csvParse(csv);
 
-    // Data de atualização: coluna F (índice 5)
-    for (let i = 0; i < linhas.length; i++) {
-      const val = (linhas[i][5]||'').trim();
-      if (val && val.match(/\d{2}[\/\-]\d{2}/)) {
-        dataAtualizacao = val;
-        document.getElementById('updateDate').textContent = val;
-        break;
-      }
-    }
+    let dataMaisRecente = null;
+    linhas.slice(1).forEach(row => {
+        const dataStr = (row[5] || '').trim(); // Coluna F
+        if (dataStr) {
+            // Converte DD/MM/AAAA para um objeto Date para comparação
+            const [d, m, y] = dataStr.split(/[\/\-]/);
+            const dataObjeto = new Date(y, m - 1, d);
+            if (!dataMaisRecente || dataObjeto > dataMaisRecente) {
+                dataMaisRecente = dataObjeto;
+                dataAtualizacao = dataStr;
+            }
+        }
+    });
+    document.getElementById('updateDate').textContent = dataAtualizacao;
 
     const dados = linhas.slice(1).map((c, i) => ({
       _idx: i,
@@ -624,144 +629,86 @@ function renderBairros() {
     
 // ── PDF ────────────────────────────
 async function gerarPDF(grupoId, bairro, pagina) {
-  const btn = document.getElementById('btn-' + grupoId);
-  if (!btn) return;
+    const btn = document.getElementById('btn-' + grupoId);
+    if (!btn) return;
 
-  const textoOriginal = btn.textContent;
-  btn.textContent = '⏳ Otimizando enquadramento...'; 
-  btn.disabled = true;
+    btn.textContent = '⏳ Preparando...';
+    btn.disabled = true;
 
-  const mapLeaflet = mapsBairro[grupoId];
-  let mapImgData = "";
+    // Captura a data da planilha e a data atual (impressão)
+    const dataPlanilha = document.getElementById('updateDate').textContent;
+    const dataImpressao = new Date().toLocaleDateString('pt-BR') + ' ' + 
+                         new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
 
-  if (mapLeaflet) {
+    const mapLeaflet = mapsBairro[grupoId];
+    let mapImgData = "";
+
+    // ... (Mantenha sua lógica existente de captura do mapa com html2canvas aqui) ...
+    // Supondo que mapImgData seja gerado corretamente como no seu código anterior.
+
+    const pag = pagina + 1;
+    const blocoEnderecosPag = todosEnderecos.filter(d => d.bairro === bairro).slice(pagina * 10, (pagina + 1) * 10);
+    
+    const linhasHTML = blocoEnderecosPag.map((item, i) => `
+        <tr>
+            <td style="text-align:center; font-weight:700; color:#f0a500; padding:8px; border-bottom:1px solid #eee;">${pagina * 10 + i + 1}</td>
+            <td style="padding:8px; border-bottom:1px solid #eee; font-weight:500;">${item.endereco}</td>
+            <td style="padding:8px; border-bottom:1px solid #eee; color:#1a2332; font-size:9px;">${item.esquina ? 'Esq. c/ ' + item.esquina : '-'}</td>
+            <td style="padding:8px; border-bottom:1px solid #eee; color:#64748b;">${item.bairro}</td>
+        </tr>
+    `).join('');
+
+    const htmlPDF = `
+        <div style="font-family:'DM Sans', Arial, sans-serif; padding:8mm; background:#fff; color:#1a2332; width:194mm;">
+            
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:10px; border-bottom:2px solid #0891b2; padding-bottom:10px;">
+                <div style="max-width:60%;">
+                    <h1 style="font-size:18px; margin:0; color:#1a2332; font-family:'Syne', sans-serif;">📍 Bairro: ${bairro}</h1>
+                    <p style="font-size:10px; color:#64748b; margin:4px 0 0 0;">Página ${pag} — Mapa de Endereços Floresta/PR</p>
+                </div>
+                
+                <div style="text-align:right; color:#0891b2; font-size:9px; font-weight:500; line-height:1.4;">
+                    <div style="background:rgba(8, 145, 178, 0.08); padding:4px 8px; border-radius:4px; border-right:3px solid #0891b2;">
+                        <span style="color:#64748b; font-size:8px; text-transform:uppercase;">Último Cadastro:</span><br>
+                        <strong>${dataPlanilha}</strong>
+                    </div>
+                    <div style="margin-top:4px; padding-right:8px;">
+                        <span style="color:#64748b; font-size:8px; text-transform:uppercase;">Impressão:</span><br>
+                        ${dataImpressao}
+                    </div>
+                </div>
+            </div>
+
+            <img src="${mapImgData}" style="width:100%; border-radius:6px; border:1px solid #d1d9e0; display:block; margin-bottom:15px;"/>
+            
+            <table style="width:100%; border-collapse:collapse; font-size:10px;">
+                <thead>
+                    <tr style="background:#f8f9fa;">
+                        <th style="padding:8px; border-bottom:2px solid #d1d9e0; width:30px;">#</th>
+                        <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Endereço</th>
+                        <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Esquina</th>
+                        <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Bairro</th>
+                    </tr>
+                </thead>
+                <tbody>${linhasHTML}</tbody>
+            </table>
+        </div>`;
+
+    const element = document.createElement('div');
+    element.innerHTML = htmlPDF;
+
     try {
-      const blocoEnderecos = todosEnderecos
-        .filter(d => d.bairro === bairro)
-        .slice(pagina * 10, (pagina + 1) * 10);
-
-      const pontos = blocoEnderecos.map(d => [d.lat, d.lng]);
-      const bounds = L.latLngBounds(pontos);
-
-      // --- CÁLCULO DINÂMICO DE DIMENSÃO ---
-      // Calculamos a dispersão real (em graus) para decidir o tamanho do print
-      const distLat = Math.abs(bounds.getNorth() - bounds.getSouth());
-      const distLng = Math.abs(bounds.getEast() - bounds.getWest());
-      
-      // Base de 800x600, mas expande se os pontos estiverem longe
-      // Multiplicamos a dispersão por um fator de escala para o canvas
-      let canvasW = Math.max(800, Math.min(1600, 800 + (distLng * 50000))); 
-      let canvasH = Math.max(600, Math.min(2000, 600 + (distLat * 50000)));
-
-      const mapContainer = mapLeaflet.getContainer();
-      const cloneContainer = mapContainer.cloneNode(true);
-      
-      // Estilizamos o clone com as dimensões dinâmicas
-      cloneContainer.style.position = 'fixed';
-      cloneContainer.style.left = '-9999px';
-      cloneContainer.style.top = '0';
-      cloneContainer.style.width = `${canvasW}px`;
-      cloneContainer.style.height = `${canvasH}px`; 
-      document.body.appendChild(cloneContainer);
-
-      const tempMap = L.map(cloneContainer, { zoomControl: false, attributionControl: false });
-      
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        crossOrigin: true 
-      }).addTo(tempMap);
-
-      // Adição dos pins
-      const ocupadosTemp = {};
-      blocoEnderecos.forEach((item, i) => {
-        let tLat = item.lat;
-        let tLng = item.lng;
-        const tChave = `${tLat.toFixed(6)},${tLng.toFixed(6)}`;
-        if (ocupadosTemp[tChave]) {
-          tLat += (Math.random() - 0.5) * 0.00015;
-          tLng += (Math.random() - 0.5) * 0.00015;
-        }
-        ocupadosTemp[tChave] = true;
-        L.marker([tLat, tLng], { icon: pinIcon(pagina * 10 + i + 1) }).addTo(tempMap);
-      });
-
-      // Enquadramento: agora o fitBounds tem muito mais espaço para trabalhar
-      tempMap.fitBounds(bounds, {
-        padding: [80, 80], 
-        maxZoom: 18, 
-        animate: false
-      });
-
-      // Garantia de zoom para leitura de rua
-      if (tempMap.getZoom() < 16) tempMap.setZoom(16);
-
-      // Aguarda carregamento dos tiles detalhados
-      await new Promise(r => setTimeout(r, 2800));
-
-      const canvas = await html2canvas(cloneContainer, {
-        useCORS: true,
-        scale: 1.5, // Reduzimos levemente a escala pois o canvas já é grande (evita erro de memória)
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-      
-      mapImgData = canvas.toDataURL('image/jpeg', 0.92);
-      tempMap.remove();
-      document.body.removeChild(cloneContainer);
-
-    } catch (e) {
-      console.error('Falha na captura dinâmica:', e);
+        await html2pdf().set({
+            margin: 0,
+            filename: `Mapa_${bairro}_P${pag}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(element).save();
+    } finally {
+        btn.textContent = '⬇ PDF desta página';
+        btn.disabled = false;
     }
-  }
-
-  // --- MONTAGEM DO PDF ---
-  const pag = pagina + 1;
-  const blocoEnderecosPag = todosEnderecos.filter(d => d.bairro === bairro).slice(pagina * 10, (pagina + 1) * 10);
-  
-  const linhasHTML = blocoEnderecosPag.map((item, i) => `
-      <tr>
-        <td style="text-align:center; font-weight:700; color:#f0a500; padding:8px; border-bottom:1px solid #eee;">${pagina * 10 + i + 1}</td>
-        <td style="padding:8px; border-bottom:1px solid #eee; font-weight:500;">${item.endereco}</td>
-        <td style="padding:8px; border-bottom:1px solid #eee; color:#1a2332; font-size:9px; line-height:1.2;">
-          ${item.esquina ? '<strong>Esq. c/</strong> ' + item.esquina : '-'}
-        </td>
-        <td style="padding:8px; border-bottom:1px solid #eee; color:#64748b;">${item.bairro}</td>
-      </tr>
-  `).join('');
-
- const htmlPDF = `
-      <div style="font-family:'DM Sans',Arial,sans-serif; padding:10mm; background:#fff; color:#1a2332; width:190mm;">
-        <div style="border-bottom:2px solid #f0a500; padding-bottom:8px; margin-bottom:10px;">
-          <h1 style="font-size:16px; margin:0;">📍 Bairro: ${bairro} — Página ${pag}</h1>
-        </div>
-        <img src="${mapImgData}" style="width:100%; border-radius:4px; border:1px solid #d1d9e0; display:block; margin-bottom:15px;"/>
-        <table style="width:100%; border-collapse:collapse; font-size:10px;">
-            <thead>
-              <tr style="background:#f8f9fa;">
-                <th style="padding:8px; border-bottom:2px solid #d1d9e0; width:30px;">#</th>
-                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Endereço</th>
-                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Referência (Esquina)</th>
-                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Bairro</th> <!-- CORRIGIDO AQUI -->
-              </tr>
-            </thead>
-            <tbody>${linhasHTML}</tbody>
-          </table>
-      </div>`;
-
-  const element = document.createElement('div');
-  element.innerHTML = htmlPDF;
-
-  try {
-    await html2pdf().set({
-      margin: 5,
-      filename: `Mapa_${bairro}_P${pag}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(element).save();
-  } finally {
-    btn.textContent = textoOriginal;
-    btn.disabled = false;
-  }
 }
     
 async function baixarTodosPDFs() {
