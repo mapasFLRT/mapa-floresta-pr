@@ -664,7 +664,7 @@ async function gerarPDF(grupoId, bairro, pagina) {
       cloneContainer.style.left = '-9999px';
       cloneContainer.style.top = '0';
       cloneContainer.style.width = '800px';
-      cloneContainer.style.height = '500px'; 
+      cloneContainer.style.height = '600px'; // Aumentado para capturar mais contexto das ruas
       document.body.appendChild(cloneContainer);
 
       const tempMap = L.map(cloneContainer, {
@@ -673,7 +673,7 @@ async function gerarPDF(grupoId, bairro, pagina) {
       });
       
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        crossOrigin: true // ESSENCIAL PARA O CHROME PERMITIR A FOTO
+        crossOrigin: true 
       }).addTo(tempMap);
 
       const ocupadosTemp = {};
@@ -687,33 +687,42 @@ async function gerarPDF(grupoId, bairro, pagina) {
         let tLng = item.lng;
         const tChave = `${tLat.toFixed(6)},${tLng.toFixed(6)}`;
         
+        // Jitter para evitar sobreposição de pins sobre nomes de ruas
         if (ocupadosTemp[tChave]) {
-          tLat += (Math.random() - 0.5) * 0.00012;
-          tLng += (Math.random() - 0.5) * 0.00012;
+          tLat += (Math.random() - 0.5) * 0.0002;
+          tLng += (Math.random() - 0.5) * 0.0002;
         }
         ocupadosTemp[tChave] = true;
         const pos = [tLat, tLng];
         pontosParaZoom.push(pos);
 
-        // Certifique-child que a função pinIcon está acessível globalmente
         L.marker(pos, { icon: pinIcon(pagina * 10 + i + 1) }).addTo(tempMap);
       });
 
+      // --- AJUSTE DE APROXIMAÇÃO (ZOOM) PARA LEITURA DE RUAS ---
       if (pontosParaZoom.length > 0) {
         const bounds = L.latLngBounds(pontosParaZoom);
+        
+        // Aumentamos o padding para [120, 120]. 
+        // Isso obriga o mapa a dar muito mais zoom para focar nos pontos centrais.
         tempMap.fitBounds(bounds, {
-          padding: [100, 100], 
-          maxZoom: 18, 
+          padding: [120, 120], 
+          maxZoom: 18, // Nível ideal para ver nomes de ruas pequenas
           animate: false
         });
+
+        // Trava de segurança: se o zoom ainda estiver longe, forçamos o nível 16
+        if (tempMap.getZoom() < 16) {
+          tempMap.setZoom(16);
+        }
       }
 
-      // Espera um pouco mais para garantir que o mapa claro carregou
-      await new Promise(r => setTimeout(r, 2000));
+      // Aguardamos os blocos do mapa carregarem (ruas detalhadas demoram mais)
+      await new Promise(r => setTimeout(r, 2500));
 
       const canvas = await html2canvas(cloneContainer, {
         useCORS: true,
-        scale: 2, 
+        scale: 2, // Garante que o texto das ruas não borre no PDF
         logging: false,
         backgroundColor: '#ffffff'
       });
@@ -729,9 +738,9 @@ async function gerarPDF(grupoId, bairro, pagina) {
   }
 
   const pag = pagina + 1;
-  const blocoEnderecos = todosEnderecos.filter(d => d.bairro === bairro).slice(pagina * 10, (pagina + 1) * 10);
+  const blocoEnderecosPag = todosEnderecos.filter(d => d.bairro === bairro).slice(pagina * 10, (pagina + 1) * 10);
   
-  const linhasHTML = blocoEnderecos.map((item, i) => `
+  const linhasHTML = blocoEnderecosPag.map((item, i) => `
     <tr>
       <td style="text-align:center; font-weight:700; color:#f0a500; padding:8px; border-bottom:1px solid #eee;">${pagina * 10 + i + 1}</td>
       <td style="padding:8px; border-bottom:1px solid #eee; font-weight:500;">${item.endereco}</td>
@@ -744,7 +753,7 @@ async function gerarPDF(grupoId, bairro, pagina) {
       <div style="border-bottom:2px solid #f0a500; padding-bottom:10px; margin-bottom:15px; display:flex; justify-content:space-between; align-items:flex-end;">
         <div>
           <h1 style="font-size:18px; margin:0; color:#0a0e14;">📍 Bairro: ${bairro}</h1>
-          <p style="font-size:12px; color:#64748b; margin:5px 0 0;">Página ${pag} — Total ${blocoEnderecos.length} endereços</p>
+          <p style="font-size:12px; color:#64748b; margin:5px 0 0;">Página ${pag} — Total ${blocoEnderecosPag.length} endereços</p>
         </div>
       </div>
       <img src="${mapImgData}" style="width:100%; border-radius:8px; border:1px solid #d1d9e0; display:block; margin-bottom:20px;"/>
@@ -772,17 +781,15 @@ async function gerarPDF(grupoId, bairro, pagina) {
   };
 
   try {
-    // Chamada correta para o html2pdf
     await html2pdf().set(opt).from(element).save();
   } catch (error) {
     console.error("Erro na geração do PDF:", error);
-    alert("Erro ao gerar o PDF. Verifique o console.");
   } finally {
     btn.textContent = textoOriginal;
     btn.disabled = false;
   }
 }
-
+    
 async function baixarTodosPDFs() {
   const btns = document.querySelectorAll('.btn-pdf:not(:disabled)');
   for (const btn of btns) {
