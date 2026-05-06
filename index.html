@@ -377,11 +377,11 @@ function pinIcon(num, color='#f0a500') {
 }
 
 function darkTiles(map) {
-  // Alteração da URL de 'dark_all' para 'voyager'
-  L.tileLayer('[https://mt1.google.com/vt/lyrs=y&x=](https://mt1.google.com/vt/lyrs=y&x=){x}&y={y}&z={z}', {
-    attribution: '© OpenStreetMap © CARTO',
-    maxZoom: 19,
-    crossOrigin: true // Necessário para a captura nítida do PDF
+  L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    crossOrigin: true,
+    attribution: '© Google Maps'
   }).addTo(map);
 }
 
@@ -624,7 +624,10 @@ function renderBairros() {
         const el = document.getElementById('map-' + grupoId);
         if (!el || mapsBairro[grupoId]) return;
         const m = L.map('map-' + grupoId, { zoomControl: true, scrollWheelZoom: false });
-        L.tileLayer('[https://mt1.google.com/vt/lyrs=y&x=](https://mt1.google.com/vt/lyrs=y&x=){x}&y={y}&z={z}', { crossOrigin: true }).addTo(m);
+       L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { 
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            crossOrigin: true 
+        }).addTo(m);
         mapsBairro[grupoId] = m;
         const ocupadosLocal = {};
         const pontosParaFocar = [];
@@ -697,9 +700,10 @@ const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' +
 
       const tempMap = L.map(cloneContainer, { zoomControl: false, attributionControl: false });
       
-      L.tileLayer('[https://mt1.google.com/vt/lyrs=y&x=](https://mt1.google.com/vt/lyrs=y&x=){x}&y={y}&z={z}', {
+     L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
         crossOrigin: true 
-      }).addTo(tempMap);
+    }).addTo(tempMap);
 
       // Adição dos pins
       const ocupadosTemp = {};
