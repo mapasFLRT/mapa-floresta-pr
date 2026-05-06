@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Mapa de Endereços — Floresta PR</title>
+<title>Mapa de Direcciones — Floresta PR</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -81,7 +81,7 @@ header{
 .tab.active{color:var(--accent);border-bottom-color:var(--accent);}
 
 .app-body{
-  height:calc(100vh - var(--header-h) - var(--tab-h));
+  height:calc(100vh - var(--header-h) - var(--tab-h) - 30px);
   display:flex;flex-direction:column;overflow:hidden;
 }
 .panel{display:none;flex:1;overflow:hidden;}
@@ -232,6 +232,18 @@ table.endtable tr:hover td{background:rgba(255,255,255,.02);}
 @keyframes spin{to{transform:rotate(360deg);}}
 .loading-overlay p{font-size:.85rem;color:var(--muted2);}
 .empty{padding:40px;text-align:center;color:var(--muted);font-size:.85rem;}
+
+footer {
+  height: 30px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+}
 </style>
 </head>
 <body>
@@ -243,22 +255,22 @@ table.endtable tr:hover td{background:rgba(255,255,255,.02);}
   </div>
   <div class="header-right">
     <div class="update-badge">
-      <span class="label">Último cadastro:</span>
+      <span class="label">Último registro:</span>
       <span class="date" id="updateDate">—</span>
     </div>
     <div class="status-chip">
       <div class="dot loading" id="statusDot"></div>
-      <span id="statusText">Carregando…</span>
+      <span id="statusText">Cargando…</span>
     </div>
   </div>
 </header>
 
 <div class="tabs">
   <div class="tab active" id="tab-geral" onclick="switchTab('geral')">
-    🗺️ &nbsp;Visão Geral
+    🗺️ &nbsp;Visión General
   </div>
   <div class="tab" id="tab-bairros" onclick="switchTab('bairros')">
-    🏘️ &nbsp;Por Bairro / PDF
+    🏘️ &nbsp;Por Barrio / PDF
   </div>
 </div>
 
@@ -268,22 +280,22 @@ table.endtable tr:hover td{background:rgba(255,255,255,.02);}
   <div class="panel active" id="panel-geral">
     <div class="sidebar">
       <div class="sidebar-top">
-        <h3>Endereços <span class="count-pill" id="countGeral">0</span></h3>
+        <h3>Direcciones <span class="count-pill" id="countGeral">0</span></h3>
         <div class="search">
-          <input type="text" id="searchGeral" placeholder="Buscar endereço ou bairro…" oninput="filtrarGeral()"/>
+          <input type="text" id="searchGeral" placeholder="Buscar dirección o barrio…" oninput="filtrarGeral()"/>
         </div>
       </div>
       <div class="filter-bar" id="filterBar"></div>
       <div class="list" id="listaGeral"></div>
       <div class="sidebar-bottom">
-        <button class="btn" onclick="carregarDados()">↻ Atualizar planilha</button>
+        <button class="btn" onclick="carregarDados()">↻ Actualizar planilla</button>
       </div>
     </div>
     <div class="map-wrap">
       <div id="map-geral"></div>
       <div class="loading-overlay" id="loadingGeral">
         <div class="spinner"></div>
-        <p>Carregando endereços…</p>
+        <p>Cargando direcciones…</p>
       </div>
     </div>
   </div>
@@ -291,19 +303,23 @@ table.endtable tr:hover td{background:rgba(255,255,255,.02);}
   <!-- PAINEL 2: BAIRROS + PDF -->
   <div class="panel" id="panel-bairros">
     <div class="bairro-toolbar">
-      <label>Filtrar bairro:</label>
+      <label>Filtrar barrio:</label>
       <select id="bairroSelect" onchange="renderBairros()">
-        <option value="">Todos os bairros</option>
+        <option value="">Todos los barrios</option>
       </select>
       <div class="spacer"></div>
-      <button class="btn-all-pdf" onclick="baixarTodosPDFs()">⬇ Todos os PDFs</button>
+      <button class="btn-all-pdf" onclick="baixarTodosPDFs()">⬇ Todos los PDFs</button>
     </div>
     <div class="bairros-scroll" id="bairrosScroll">
-      <div class="empty">Carregando dados…</div>
+      <div class="empty">Cargando datos…</div>
     </div>
   </div>
 
 </div>
+
+<footer>
+  Versão 1.0
+</footer>
 
 <script>
 // ═══════════════════════════════════
@@ -371,7 +387,7 @@ function darkTiles(map) {
 
 // ── Carregar dados ──────────────────
 async function carregarDados() {
-  setStatus('loading','Carregando…');
+  setStatus('loading','Cargando…');
   document.getElementById('loadingGeral').style.display='flex';
   try {
     const url = CSV_URL + '&t=' + Date.now();
@@ -411,7 +427,7 @@ async function carregarDados() {
     })).filter(d => d.endereco && d.lat && d.lng);
 
     todosEnderecos = dados;
-    setStatus('ok', `${dados.length} endereços`);
+    setStatus('ok', `${dados.length} direcciones`);
     document.getElementById('loadingGeral').style.display='none';
 
     renderGeralLista(dados);
@@ -420,7 +436,7 @@ async function carregarDados() {
     popularSelectBairro(dados);
 
   } catch(e) {
-    setStatus('error','Erro ao carregar');
+    setStatus('error','Error al cargar');
     document.getElementById('loadingGeral').style.display='none';
     console.error(e);
   }
@@ -430,7 +446,7 @@ async function carregarDados() {
 function renderGeralLista(dados) {
   document.getElementById('countGeral').textContent = dados.length;
   const lista = document.getElementById('listaGeral');
-  if (!dados.length) { lista.innerHTML='<div class="empty">Nenhum resultado.</div>'; return; }
+  if (!dados.length) { lista.innerHTML='<div class="empty">Sin resultados.</div>'; return; }
   
   lista.innerHTML = dados.map((item, i) => `
     <div class="list-item" id="gi-${item._idx}" onclick="focarGeral(${item._idx})">
@@ -524,7 +540,7 @@ function popularFiltros(dados) {
   const bar = document.getElementById('filterBar');
   
   // IMPORTANTE: O botão 'Tudo' agora tem o data-bairro="" definido explicitamente
-  bar.innerHTML = `<button class="filter-btn active" data-bairro="" onclick="setFiltro(this,'')">Tudo</button>` + 
+  bar.innerHTML = `<button class="filter-btn active" data-bairro="" onclick="setFiltro(this,'')">Todo</button>` + 
     bairros.map(x => {
       const xEscapado = x.replace(/'/g, "\\'"); // Trata nomes de bairros com aspas/apostrofos
       return `<button class="filter-btn" data-bairro="${x}" onclick="setFiltro(this,'${xEscapado}')">${x}</button>`;
@@ -535,7 +551,7 @@ function popularFiltros(dados) {
 function popularSelectBairro(dados) {
   const bairros = [...new Set(dados.map(d=>d.bairro).filter(Boolean))].sort();
   const sel = document.getElementById('bairroSelect');
-  sel.innerHTML = '<option value="">Todos os bairros</option>'
+  sel.innerHTML = '<option value="">Todos los barrios</option>'
     + bairros.map(b=>`<option value="${b}">${b}</option>`).join('');
 }
 
@@ -549,13 +565,13 @@ function renderBairros() {
 
   let dados = filtro ? todosEnderecos.filter(d => d.bairro === filtro) : todosEnderecos;
   if (!dados.length) { 
-    scroll.innerHTML = '<div class="empty">Nenhum endereço encontrado.</div>'; 
+    scroll.innerHTML = '<div class="empty">No se encontraron direcciones.</div>'; 
     return; 
   }
 
   const grupos = {};
   dados.forEach(d => {
-    const k = d.bairro || 'Sem bairro';
+    const k = d.bairro || 'Sin barrio';
     if (!grupos[k]) grupos[k] = [];
     grupos[k].push(d);
   });
@@ -575,10 +591,10 @@ function renderBairros() {
         <div class="grupo-header">
           <div>
             <div class="grupo-title">📍 ${bairro}${paginaLabel}</div>
-            <div class="grupo-meta">${bloco.length} endereço${bloco.length > 1 ? 's' : ''} · Itens ${p * 10 + 1} a ${p * 10 + bloco.length}</div>
+            <div class="grupo-meta">${bloco.length} direccione${bloco.length > 1 ? 's' : ''} · Ítems ${p * 10 + 1} a ${p * 10 + bloco.length}</div>
           </div>
           <button class="btn-pdf" id="btn-${grupoId}" onclick="gerarPDF('${grupoId}','${bairro}',${p})">
-            ⬇ PDF desta página
+            ⬇ PDF de esta página
           </button>
         </div>
         <div class="grupo-map" id="map-${grupoId}"></div>
@@ -587,9 +603,9 @@ function renderBairros() {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Endereço</th>
-                <th>Referência</th>
-                <th>Bairro / Região</th>
+                <th>Dirección</th>
+                <th>Referencia</th>
+                <th>Barrio / Región</th>
               </tr>
             </thead>
             <tbody>${bloco.map((item, i) => `
@@ -638,13 +654,13 @@ async function gerarPDF(grupoId, bairro, pagina) {
   if (!btn) return;
 
   const textoOriginal = btn.textContent;
-  btn.textContent = '⏳ Otimizando enquadramento...'; 
+  btn.textContent = '⏳ Optimizando encuadre...'; 
   btn.disabled = true;
 
 // Captura a data da planilha e a data atual (impressão)
 const dataPlanilha = document.getElementById('updateDate').textContent;
-const dataImpressao = new Date().toLocaleDateString('pt-BR') + ' ' + 
-                     new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' + 
+                     new Date().toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
 
   const mapLeaflet = mapsBairro[grupoId];
   let mapImgData = "";
@@ -724,7 +740,7 @@ const dataImpressao = new Date().toLocaleDateString('pt-BR') + ' ' +
       document.body.removeChild(cloneContainer);
 
     } catch (e) {
-      console.error('Falha na captura dinâmica:', e);
+      console.error('Falha na captura dinámica:', e);
     }
   }
 
@@ -748,16 +764,16 @@ const dataImpressao = new Date().toLocaleDateString('pt-BR') + ' ' +
 
         <div style="text-align:right; color:#0891b2; font-size:9px; font-weight:500; line-height:1.4;">
             <div style="background:rgba(8, 145, 178, 0.08); padding:4px 8px; border-radius:4px; border-right:3px solid #0891b2;">
-                <span style="color:#64748b; font-size:8px; text-transform:uppercase;">Último cadastro: </span>
+                <span style="color:#64748b; font-size:8px; text-transform:uppercase;">Último registro: </span>
                 <strong>${dataPlanilha}</strong>
                 &nbsp;&nbsp;&nbsp;
-                <span style="color:#64748b; font-size:8px; text-transform:uppercase;">Mapa gerado em: </span>
+                <span style="color:#64748b; font-size:8px; text-transform:uppercase;">Mapa generado en: </span>
                 ${dataImpressao}
             </div>
         </div>
        
         <div style="border-bottom:2px solid #f0a500; padding-bottom:8px; margin-bottom:10px;">
-          <h1 style="font-size:16px; margin:0;">📍 Bairro: ${bairro} — Página ${pag}</h1>
+          <h1 style="font-size:16px; margin:0;">📍 Barrio: ${bairro} — Página ${pag}</h1>
         </div>
     
 
@@ -766,9 +782,9 @@ const dataImpressao = new Date().toLocaleDateString('pt-BR') + ' ' +
             <thead>
               <tr style="background:#f8f9fa;">
                 <th style="padding:8px; border-bottom:2px solid #d1d9e0; width:30px;">#</th>
-                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Endereço</th>
-                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Referência</th>
-                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Bairro</th>
+                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Dirección</th>
+                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Referencia</th>
+                <th style="padding:8px; border-bottom:2px solid #d1d9e0; text-align:left;">Barrio</th>
               </tr>
             </thead>
             <tbody>${linhasHTML}</tbody>
