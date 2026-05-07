@@ -857,13 +857,12 @@ const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' +
           const checar = setInterval(() => {
             const tiles = cloneContainer.querySelectorAll('.leaflet-tile-loaded');
             tentativas++;
-            // Espera até ter tiles carregados OU no máximo 15 segundos
             if (tiles.length > 0 && tentativas > 3) {
               clearInterval(checar);
-              setTimeout(r, 1000); // 1s extra após confirmar que carregou
-            } else if (tentativas > 30) { // 30 × 500ms = 15 segundos máximo
+              setTimeout(r, 2500);
+            } else if (tentativas > 60) { // máximo 30 segundos
               clearInterval(checar);
-              r(); // continua mesmo assim
+              r();
             }
           }, 500);
         });
@@ -939,7 +938,7 @@ const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' +
       margin: 5,
       filename: `Mapa_${bairro}_P${pag}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     }).from(element).save();
   } finally {
