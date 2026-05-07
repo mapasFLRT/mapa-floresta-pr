@@ -499,7 +499,7 @@ function pinIcon(num, color='#f0a500') {
 }
 
 function darkTiles(map) {
-  L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+  L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
     maxZoom: 20,
     subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
     crossOrigin: true,
@@ -746,7 +746,7 @@ function renderBairros() {
         const el = document.getElementById('map-' + grupoId);
         if (!el || mapsBairro[grupoId]) return;
         const m = L.map('map-' + grupoId, { zoomControl: true, scrollWheelZoom: false });
-       L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { 
+       L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { 
             subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
             crossOrigin: true 
         }).addTo(m);
@@ -822,7 +822,7 @@ const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' +
 
       const tempMap = L.map(cloneContainer, { zoomControl: false, attributionControl: false });
       
-     L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+     L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
         crossOrigin: true 
     }).addTo(tempMap);
