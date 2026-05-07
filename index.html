@@ -914,12 +914,29 @@ async function baixarTodosPDFs() {
 
 // ── Tabs ────────────────────────────
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
-  document.getElementById('panel-'+tab).classList.add('active');
-  if(tab==='bairros' && todosEnderecos.length) renderBairros();
-  if(tab==='geral') setTimeout(()=>mapGeral&&mapGeral.invalidateSize(),100);
+  // Remove classe ativa de todas as abas e painéis
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  
+  // Ativa a aba e o painel selecionado
+  const activeTab = document.getElementById('tab-' + tab);
+  const activePanel = document.getElementById('panel-' + tab);
+  
+  if (activeTab && activePanel) {
+    activeTab.classList.add('active');
+    activePanel.classList.add('active');
+  }
+
+  // AJUSTE PARA CELULAR: Se for para a aba de bairros, garante que o conteúdo apareça
+  if (tab === 'bairros') {
+    if (typeof todosDados !== 'undefined' && todosDados.length > 0) {
+       // Se os dados já existem, apenas garante a renderização
+       renderizarAbasBairros(); 
+    }
+  }
+  
+  // Rola para o topo para garantir que o usuário veja a mudança no celular
+  window.scrollTo(0, 0);
 }
 
 // ── Init ────────────────────────────
