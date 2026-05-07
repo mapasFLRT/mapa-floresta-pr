@@ -424,18 +424,18 @@ function toggleMobileSidebar() {
 
   <!-- PAINEL 2: BAIRROS + PDF -->
   <div class="panel" id="panel-bairros">
-    <div class="bairro-toolbar">
-      <label>Filtrar barrio:</label>
-      <select id="bairroSelect" onchange="renderBairros()">
-        <option value="">Todos los barrios</option>
-      </select>
-      <div class="spacer"></div>
-      <button class="btn-all-pdf" onclick="baixarTodosPDFs()">⬇ Todos los PDFs</button>
+      <div class="bairro-toolbar">
+        <label>Filtrar barrio:</label>
+        <select id="bairroSelect" onchange="renderBairros()">
+          <option value="">Todos los barrios</option>
+        </select>
+        <div class="spacer"></div>
+        <button class="btn-all-pdf" onclick="baixarTodosPDFs()">⬇ Todos los PDFs</button>
+      </div>
+      <div class="bairros-scroll" id="bairrosScroll">
+        <div class="empty">Cargando datos…</div>
+      </div>
     </div>
-    <div class="bairros-scroll" id="bairrosScroll">
-      <div class="empty">Cargando datos…</div>
-    </div>
-  </div>
 
 </div>
 
@@ -956,44 +956,28 @@ function switchTab(tab) {
     panel.classList.add('active');
   }
 
-  // 2. Controle do Botão Sanduíche (Ajuste para ignorar o !important do CSS)
+  // 2. Controle do Botão Sanduíche para Celular
   const btnToggle = document.querySelector('.toggle-sidebar');
   if (btnToggle) {
-    if (tab === 'geral') {
-      btnToggle.setAttribute('style', 'display: block !important');
-    } else {
-      btnToggle.setAttribute('style', 'display: none !important');
-    }
+    btnToggle.style.setProperty('display', tab === 'geral' ? 'block' : 'none', 'important');
   }
 
   // 3. Renderização da Aba de Bairros (PDFs)
   if (tab === 'bairros') {
-    const container = document.getElementById('lista-bairros');
-    // Se os dados existem, limpa o "Cargando" e renderiza
-    if (typeof todosDados !== 'undefined' && todosDados.length > 0) {
-      if (container) container.innerHTML = ""; // Limpa o texto de carregamento
-      renderizarAbasBairros();
-    } else {
-      // Vigia os dados se eles ainda não chegaram
-      const checkData = setInterval(() => {
-        if (typeof todosDados !== 'undefined' && todosDados.length > 0) {
-          if (container) container.innerHTML = "";
-          renderizarAbasBairros();
-          clearInterval(checkData);
-        }
-      }, 500);
-      setTimeout(() => clearInterval(checkData), 10000);
+    // Se os dados já existem (carregados no início), apenas renderiza
+    if (todosEnderecos && todosEnderecos.length > 0) {
+      renderBairros();
     }
   }
 
-  // 4. Ajuste do mapa
-  if (tab === 'geral' && typeof mapGeral !== 'undefined') {
+  // 4. Ajuste técnico do mapa
+  if (tab === 'geral' && mapGeral) {
     setTimeout(() => { mapGeral.invalidateSize(); }, 300);
   }
 
   window.scrollTo(0, 0);
 }
-
+    
 // ── Init ────────────────────────────
 mapGeral = L.map('map-geral',{zoomControl:true}).setView([-23.608,-52.087],13);
 darkTiles(mapGeral);
