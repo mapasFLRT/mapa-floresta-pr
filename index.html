@@ -852,7 +852,21 @@ const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' +
       if (tempMap.getZoom() < 16) tempMap.setZoom(16);
 
       // Aguarda carregamento dos tiles detalhados
-      await new Promise(r => setTimeout(r, 2800));
+      await new Promise(r => {
+          let tentativas = 0;
+          const checar = setInterval(() => {
+            const tiles = cloneContainer.querySelectorAll('.leaflet-tile-loaded');
+            tentativas++;
+            // Espera até ter tiles carregados OU no máximo 15 segundos
+            if (tiles.length > 0 && tentativas > 3) {
+              clearInterval(checar);
+              setTimeout(r, 1000); // 1s extra após confirmar que carregou
+            } else if (tentativas > 30) { // 30 × 500ms = 15 segundos máximo
+              clearInterval(checar);
+              r(); // continua mesmo assim
+            }
+          }, 500);
+        });
 
       const canvas = await html2canvas(cloneContainer, {
         useCORS: true,
