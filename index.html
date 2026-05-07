@@ -254,7 +254,7 @@ footer {
 
   header {
     height: auto;
-    flex-direction: column; /* Cabeçalho quebra em linhas corretamente */
+    flex-direction: column; 
     padding: 10px;
     gap: 10px;
   }
@@ -263,7 +263,7 @@ footer {
     width: 100%;
     justify-content: space-between;
     font-size: 0.7rem;
-    flex-wrap: wrap; /* Garante que as info de data/hora não espremam */
+    flex-wrap: wrap;
   }
 
   .app-body {
@@ -271,16 +271,23 @@ footer {
     overflow: visible;
   }
 
-  /* Importante: Define altura para o painel pai para o mapa saber onde ficar */
-  #panel-geral {
-    flex-direction: column; 
+  /* Garante que apenas a aba ativa apareça */
+  .panel {
+    display: none !important; 
+  }
+  .panel.active {
     display: flex !important;
-    min-height: 800px; 
+    flex-direction: column;
+    min-height: 800px;
+  }
+
+  #panel-geral.active {
+    flex-direction: column; 
   }
 
   .sidebar {
     width: 100%; 
-    height: 450px; /* Altura para ver os filtros e lista */
+    height: 450px; 
     border-right: none;
     border-bottom: 1px solid var(--border);
     transition: 0.3s;
@@ -292,9 +299,9 @@ footer {
   }
 
   .map-wrap {
-    height: 450px; /* Define altura fixa para o mapa aparecer embaixo */
+    height: 450px; 
     width: 100%;
-    flex: none; /* Impede que o mapa "suma" tentando se espremer */
+    flex: none;
   }
 
   #map-geral {
@@ -914,28 +921,37 @@ async function baixarTodosPDFs() {
 
 // ── Tabs ────────────────────────────
 function switchTab(tab) {
-  // Remove classe ativa de todas as abas e painéis
+  // 1. Remove classes ativas
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   
-  // Ativa a aba e o painel selecionado
-  const activeTab = document.getElementById('tab-' + tab);
-  const activePanel = document.getElementById('panel-' + tab);
+  // 2. Ativa a aba e o painel selecionado
+  const tabBtn = document.getElementById('tab-' + tab);
+  const panel = document.getElementById('panel-' + tab);
   
-  if (activeTab && activePanel) {
-    activeTab.classList.add('active');
-    activePanel.classList.add('active');
+  if (tabBtn && panel) {
+    tabBtn.classList.add('active');
+    panel.classList.add('active');
+    console.log("Mudou para a aba:", tab); // Para você testar no console
   }
 
-  // AJUSTE PARA CELULAR: Se for para a aba de bairros, garante que o conteúdo apareça
+  // 3. Lógica específica para a aba de Bairros (PDFs)
   if (tab === 'bairros') {
+    // Se os dados globais existem mas a aba está vazia, força a renderização
+    const containerBairros = document.getElementById('lista-bairros');
     if (typeof todosDados !== 'undefined' && todosDados.length > 0) {
-       // Se os dados já existem, apenas garante a renderização
-       renderizarAbasBairros(); 
+      if (!containerBairros || containerBairros.innerHTML === "") {
+        renderizarAbasBairros();
+      }
     }
   }
-  
-  // Rola para o topo para garantir que o usuário veja a mudança no celular
+
+  // 4. Ajuste de Mapa para a aba Geral (caso venha do celular)
+  if (tab === 'geral' && typeof mapGeral !== 'undefined') {
+    setTimeout(() => { mapGeral.invalidateSize(); }, 200);
+  }
+
+  // 5. Garante que a tela suba no celular para mostrar o conteúdo
   window.scrollTo(0, 0);
 }
 
