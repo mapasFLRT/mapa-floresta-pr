@@ -244,10 +244,79 @@ footer {
   color: var(--muted);
   font-family: 'DM Mono', monospace;
 }
+
+/* AJUSTES PARA CELULAR */
+@media (max-width: 768px) {
+  html, body { 
+    overflow: auto !important; /* Permite a rolagem da página */
+    height: auto; 
+  }
+
+  header {
+    height: auto;
+    flex-direction: column; /* Faz o cabeçalho quebrar em linhas */
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .header-right {
+    width: 100%;
+    justify-content: space-between;
+    font-size: 0.7rem;
+  }
+
+  .app-body {
+    height: auto; /* Remove a altura fixa no mobile */
+    overflow: visible;
+  }
+
+  #panel-geral {
+    flex-direction: column; /* Coloca o mapa embaixo da lista */
+  }
+
+  .sidebar {
+    width: 100%; /* Barra lateral ocupa a largura toda */
+    height: 400px; /* Altura definida para a lista não ser infinita */
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    transition: 0.3s;
+  }
+
+  /* Classe para esconder a barra lateral (Efeito Sanduíche) */
+  .sidebar.hidden {
+    display: none;
+  }
+
+  .map-wrap {
+    height: 400px; /* Garante que o mapa apareça com bom tamanho */
+    width: 100%;
+  }
+
+  /* Botão Flutuante para alternar a barra lateral */
+  .toggle-sidebar {
+    display: block !important;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+}
+
+/* Esconde o botão toggle por padrão no computador */
+.toggle-sidebar { display: none; }
+    
 </style>
 </head>
 <body>
-
+<button class="toggle-sidebar" onclick="document.querySelector('.sidebar').classList.toggle('hidden')">
+  ☰
+</button>
 <header>
   <div class="brand">
     <img src="placeholder.png" alt="Ícone">
