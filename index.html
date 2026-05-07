@@ -249,101 +249,76 @@ footer {
 /* AJUSTES PARA CELULAR */
 @media (max-width: 768px) {
   html, body { 
-    overflow: auto !important; 
-    height: auto !important; 
+    overflow: auto !important; /* Permite a rolagem da página */
+    height: auto; 
   }
 
   header {
-    height: auto !important;
-    flex-direction: column !important; /* Força um embaixo do outro */
-    align-items: center;
-    padding: 15px 10px !important;
-    gap: 12px !important;
+    height: auto;
+    flex-direction: column; /* Faz o cabeçalho quebrar em linhas */
+    padding: 10px;
+    gap: 10px;
   }
 
   .header-right {
-    width: 100% !important;
-    flex-wrap: wrap; /* Garante que as info do topo quebrem linha se precisar */
-    justify-content: center !important;
-    gap: 10px;
-    font-size: 0.8rem;
+    width: 100%;
+    justify-content: space-between;
+    font-size: 0.7rem;
   }
 
   .app-body {
-    height: auto !important;
-    overflow: visible !important;
-    display: block !important; /* Muda de flex para block para o mapa descer */
+    height: auto; /* Remove a altura fixa no mobile */
+    overflow: visible;
   }
 
   #panel-geral {
-    display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column; /* Coloca o mapa embaixo da lista */
   }
 
   .sidebar {
-    width: 100% !important;
-    height: 450px !important; /* Altura para ver os filtros e endereços */
+    width: 100%; /* Barra lateral ocupa a largura toda */
+    height: 400px; /* Altura definida para a lista não ser infinita */
     border-right: none;
     border-bottom: 1px solid var(--border);
     transition: 0.3s;
-    display: block;
   }
 
+  /* Classe para esconder a barra lateral (Efeito Sanduíche) */
   .sidebar.hidden {
-    display: none !important;
+    display: none;
   }
 
   .map-wrap {
-    height: 500px !important; /* Altura fixa para o mapa não sumir */
-    width: 100% !important;
-    display: block !important;
+    height: 400px; /* Garante que o mapa apareça com bom tamanho */
+    width: 100%;
   }
 
-  #map-geral {
-    height: 100% !important;
-    width: 100% !important;
-    min-height: 400px;
-  }
-
+  /* Botão Flutuante para alternar a barra lateral */
   .toggle-sidebar {
     display: block !important;
     position: fixed;
     bottom: 20px;
     right: 20px;
-    z-index: 9999;
+    z-index: 1000;
     background: var(--accent);
     color: white;
     border: none;
     padding: 15px;
     border-radius: 50%;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   }
 }
 
+/* Esconde o botão toggle por padrão no computador */
 .toggle-sidebar { display: none; }
     
 </style>
 </head>
 <body>
     
-<button class="toggle-sidebar" onclick="alternarSidebarMobile()">
+<button class="toggle-sidebar" onclick="document.querySelector('.sidebar').classList.toggle('hidden')">
   ☰
 </button>
-
-<script>
-function alternarSidebarMobile() {
-  const sidebar = document.querySelector('.sidebar');
-  sidebar.classList.toggle('hidden');
-  
-  // Se o mapa existir, avisamos ele que a tela mudou de tamanho
-  // Isso faz ele carregar os endereços e imagens na hora
-  if (typeof mapGeral !== 'undefined' && mapGeral) {
-    setTimeout(() => {
-      mapGeral.invalidateSize();
-    }, 300); // espera a animação da barra sumindo
-  }
-}
-</script>
     
 <header>
   <div class="brand">
