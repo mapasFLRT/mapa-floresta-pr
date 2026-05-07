@@ -321,18 +321,31 @@ footer {
     border-radius: 50%;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   }
-  #panel-bairros.active {
-    display: block !important; /* Muda para block no celular para a lista fluir */
-    padding: 15px;
-    min-height: 100vh;
+  /* Esconde painéis inativos sem quebrar a lógica do script */
+  .panel:not(.active) {
+    display: none !important;
   }
 
-  /* Esconde o botão toggle por padrão, o JS decide quando mostrar */
+  .panel.active {
+    display: flex !important;
+    flex-direction: column;
+    width: 100%;
+    min-height: 800px;
+  }
+
+  /* Ajuste específico para a aba de Bairros */
+  #panel-bairros.active {
+    display: block !important; 
+    padding: 15px;
+  }
+
+  /* O botão sanduíche começa escondido, o JS decide */
   .toggle-sidebar {
     display: none; 
   }
 }
 
+/* Fora da media query */
 .toggle-sidebar { display: none; }
     
 </style>
@@ -931,11 +944,10 @@ async function baixarTodosPDFs() {
 
 // ── Tabs ────────────────────────────
 function switchTab(tab) {
-  // 1. Remove classes ativas
+  // 1. Alterna classes ativas
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   
-  // 2. Ativa o botão e o painel correto
   const tabBtn = document.getElementById('tab-' + tab);
   const panel = document.getElementById('panel-' + tab);
   
@@ -944,33 +956,37 @@ function switchTab(tab) {
     panel.classList.add('active');
   }
 
-  // 3. Controle do Botão Sanduíche (Sumi-lo na segunda aba)
+  // 2. Controle do Botão Sanduíche (Ajuste para ignorar o !important do CSS)
   const btnToggle = document.querySelector('.toggle-sidebar');
   if (btnToggle) {
-    btnToggle.style.display = (tab === 'geral') ? 'block' : 'none';
+    if (tab === 'geral') {
+      btnToggle.setAttribute('style', 'display: block !important');
+    } else {
+      btnToggle.setAttribute('style', 'display: none !important');
+    }
   }
 
-  // 4. Lógica de renderização "Insistente" para a Aba de Bairros
+  // 3. Renderização da Aba de Bairros (PDFs)
   if (tab === 'bairros') {
     const container = document.getElementById('lista-bairros');
-    
-    // Tenta renderizar imediatamente se os dados existirem
+    // Se os dados existem, limpa o "Cargando" e renderiza
     if (typeof todosDados !== 'undefined' && todosDados.length > 0) {
+      if (container) container.innerHTML = ""; // Limpa o texto de carregamento
       renderizarAbasBairros();
     } else {
-      // Se não existirem, cria um "vigia" que renderiza assim que os dados chegarem
+      // Vigia os dados se eles ainda não chegaram
       const checkData = setInterval(() => {
         if (typeof todosDados !== 'undefined' && todosDados.length > 0) {
+          if (container) container.innerHTML = "";
           renderizarAbasBairros();
           clearInterval(checkData);
         }
       }, 500);
-      // Para de procurar depois de 10 segundos para não pesar o celular
       setTimeout(() => clearInterval(checkData), 10000);
     }
   }
 
-  // 5. Ajuste do mapa
+  // 4. Ajuste do mapa
   if (tab === 'geral' && typeof mapGeral !== 'undefined') {
     setTimeout(() => { mapGeral.invalidateSize(); }, 300);
   }
