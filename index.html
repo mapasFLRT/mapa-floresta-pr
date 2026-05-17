@@ -607,6 +607,8 @@ function renderGeralMarcadores(dados) {
         html:`<div style="background:var(--accent);width:22px;height:22px;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;color:black;box-shadow:0 2px 5px rgba(0,0,0,0.3)">${i+1}</div>`
       })
     }).addTo(mapGeral);
+
+    m._idx = item._idx;
     
     m.bindPopup(`<div class="popup-num">${i+1}</div><div class="popup-addr">${item.endereco}</div><div class="popup-bairro">📍 ${item.bairro}</div>`);
     m.on('click', () => focarGeral(item._idx));
@@ -627,7 +629,10 @@ function focarGeral(idx) {
   const el = document.getElementById('gi-'+idx);
   if(el){el.classList.add('active');el.scrollIntoView({block:'nearest'});}
   const item = todosEnderecos.find(d=>d._idx===idx);
-  const pos = todosEnderecos.filter(d=>d.lat).findIndex(d=>d._idx===idx);
+
+  // Busca o marcador pelo _idx salvo em cada marker, não pelo índice do array global
+  const pos = marcadoresGeral.findIndex(m => m._idx === idx);
+
   if(item) mapGeral.setView([item.lat,item.lng],17,{animate:true});
   if(pos>=0 && marcadoresGeral[pos]) marcadoresGeral[pos].openPopup();
 }
