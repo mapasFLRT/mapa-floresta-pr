@@ -613,6 +613,7 @@ function renderGeralMarcadores(dados) {
     m.bindPopup(`<div class="popup-num">${i+1}</div><div class="popup-addr">${item.endereco}</div><div class="popup-bairro">📍 ${item.bairro}</div>`);
     m.on('click', () => focarGeral(item._idx));
     marcadoresGeral.push(m);
+    m._idx = item._idx;
   });
 
   if (dados.length > 0) {
@@ -630,7 +631,6 @@ function focarGeral(idx) {
   if(el){el.classList.add('active');el.scrollIntoView({block:'nearest'});}
   const item = todosEnderecos.find(d=>d._idx===idx);
 
-  // Busca o marcador pelo _idx salvo em cada marker, não pelo índice do array global
   const pos = marcadoresGeral.findIndex(m => m._idx === idx);
 
   if(item) mapGeral.setView([item.lat,item.lng],17,{animate:true});
