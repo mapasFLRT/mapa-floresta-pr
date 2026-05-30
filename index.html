@@ -704,10 +704,10 @@ function renderBairros() {
   });
 
   Object.entries(grupos).sort(([a], [b]) => a.localeCompare(b, 'pt')).forEach(([bairro, items]) => {
-    const totalPags = Math.ceil(items.length / 10);
+    const totalPags = Math.ceil(items.length / 4);
     
     for (let p = 0; p < totalPags; p++) {
-      const bloco = items.slice(p * 10, (p + 1) * 10);
+      const bloco = items.slice(p * 4, (p + 1) * 4);
       const grupoId = `g_${bairro.replace(/[^a-zA-Z0-9]/g, '_')}_${p}`;
       const paginaLabel = totalPags > 1 ? ` — Pág. ${p + 1}/${totalPags}` : '';
 
@@ -718,7 +718,7 @@ function renderBairros() {
         <div class="grupo-header">
           <div>
             <div class="grupo-title">📍 ${bairro}${paginaLabel}</div>
-            <div class="grupo-meta">${bloco.length} direccione${bloco.length > 1 ? 's' : ''} · Ítems ${p * 10 + 1} a ${p * 10 + bloco.length}</div>
+            <div class="grupo-meta">${bloco.length} direccione${bloco.length > 1 ? 's' : ''} · Ítems ${p * 4 + 1} a ${p * 4 + bloco.length}</div>
           </div>
           <button class="btn-pdf" id="btn-${grupoId}" onclick="gerarPDF('${grupoId}','${bairro}',${p})">
             ⬇ PDF de esta página
@@ -737,7 +737,7 @@ function renderBairros() {
             </thead>
             <tbody>${bloco.map((item, i) => `
               <tr>
-                <td class="td-num">${p * 10 + i + 1}</td>
+                <td class="td-num">${p * 4 + i + 1}</td>
                 <td class="td-endereco">${item.endereco}</td>
                 <td style="font-size: 0.75rem; color: var(--muted2);">${item.esquina || '-'}</td> <!-- ADICIONADO -->
                 <td class="td-bairro">${item.bairro}</td>
@@ -765,7 +765,7 @@ function renderBairros() {
           ocupadosLocal[chave] = true;
           const pos = [lat, lng];
           pontosParaFocar.push(pos);
-          L.marker(pos, { icon: pinIcon(p * 10 + i + 1) }).addTo(m).bindPopup(`<b>#${p * 10 + i + 1}</b><br>${item.endereco}`);
+          L.marker(pos, { icon: pinIcon(p * 4 + i + 1) }).addTo(m).bindPopup(`<b>#${p * 4 + i + 1}</b><br>${item.endereco}`);
         });
         if (pontosParaFocar.length > 1) {
           m.fitBounds(L.latLngBounds(pontosParaFocar), { padding: [40, 40], maxZoom: 18 });
@@ -799,7 +799,7 @@ const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' +
     try {
       const blocoEnderecos = todosEnderecos
         .filter(d => d.bairro === bairro)
-        .slice(pagina * 10, (pagina + 1) * 10);
+        .slice(pagina * 4, (pagina + 1) * 4);
 
       const pontos = blocoEnderecos.map(d => [d.lat, d.lng]);
       const bounds = L.latLngBounds(pontos);
@@ -843,7 +843,7 @@ const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' +
           tLng += (Math.random() - 0.5) * 0.00015;
         }
         ocupadosTemp[tChave] = true;
-        L.marker([tLat, tLng], { icon: pinIcon(pagina * 10 + i + 1) }).addTo(tempMap);
+        L.marker([tLat, tLng], { icon: pinIcon(pagina * 4 + i + 1) }).addTo(tempMap);
       });
 
       // Enquadramento: agora o fitBounds tem muito mais espaço para trabalhar
@@ -890,11 +890,11 @@ const dataImpressao = new Date().toLocaleDateString('es-ES') + ' ' +
 
   // --- MONTAGEM DO PDF ---
   const pag = pagina + 1;
-  const blocoEnderecosPag = todosEnderecos.filter(d => d.bairro === bairro).slice(pagina * 10, (pagina + 1) * 10);
+  const blocoEnderecosPag = todosEnderecos.filter(d => d.bairro === bairro).slice(pagina * 4, (pagina + 1) * 4);
   
   const linhasHTML = blocoEnderecosPag.map((item, i) => `
       <tr>
-        <td style="text-align:center; font-weight:700; color:#f0a500; padding:8px; border-bottom:1px solid #eee;">${pagina * 10 + i + 1}</td>
+        <td style="text-align:center; font-weight:700; color:#f0a500; padding:8px; border-bottom:1px solid #eee;">${pagina * 4 + i + 1}</td>
         <td style="padding:8px; border-bottom:1px solid #eee; font-weight:500;">${item.endereco}</td>
         <td style="padding:8px; border-bottom:1px solid #eee; color:#1a2332; font-size:9px; line-height:1.2;">
           ${item.esquina ? '<strong>Esq. c/</strong> ' + item.esquina : '-'}
